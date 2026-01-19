@@ -38,6 +38,7 @@ class JobVacancy extends Model
         'open_until_type',
         'open_until_date',
         'submission_channels',
+        'description',
     ];
 
     /**

@@ -4,117 +4,59 @@ import AppLayout from '@/Layouts/AppLayout';
 
 export default function FasilitasPerawatan({ facilities, pageTitle, pageDescription }) {
 
-    // --- DATA MOCKUP ---
-    const staticFacilities = [
-        {
-            id: 'static-1',
-            title: "RUANG RAWAT INAP",
-            image_path: "https://gfztdbbmjoniayvycnsb.supabase.co/storage/v1/object/public/web-profile/aset/rawat-inap.jpg",
-            amenities: ["1 Tempat Tidur", "1 Kursi Penunggu Pasien", "Kipas Angin", "Almari loker", "Meja Makan", "Kamar mandi luar", "Free Wi-Fi"]
-        },
-        {
-            id: 'static-2',
-            title: "RUANG NIFAS",
-            image_path: "https://gfztdbbmjoniayvycnsb.supabase.co/storage/v1/object/public/web-profile/aset/ruang-nifas.jpg",
-            amenities: ["1 Tempat Tidur", "AC", "Box Bayi", "Meja Makan", "Kamar mandi luar"]
-        }
-    ];
-
-    // Menambahkan fasilitas dari gambar ke mockup untuk memastikan tampilan sesuai
-    const amenitiesFromImage = ["1 Tempat Tidur", "1 Kursi Penunggu Pasien", "Kipas Angin", "Almari loker", "Meja Makan", "Kamar mandi luar", "Free Wi-Fi"];
-    if (staticFacilities[0] && staticFacilities[0].amenities) {
-        // Gabungkan dan hapus duplikat untuk demo
-        const combinedAmenities = [...new Set([...amenitiesFromImage, ...staticFacilities[0].amenities])];
-        staticFacilities[0].amenities = amenitiesFromImage; // Set sesuai gambar
-    }
-
-
-    const dataToShow = (facilities && facilities.length > 0) ? facilities : staticFacilities;
+    // --- DATA LOGIC (TIDAK BERUBAH) ---
+    const dataToShow = facilities || [];
 
     const getImageUrl = (path) => {
         if (!path) return 'https://via.placeholder.com/800x400?text=No+Image';
         return path.startsWith('http') ? path : `/storage/${path}`;
     };
 
-    // --- FUNGSI UNTUK EKSTRAK DAFTAR FASILITAS ---
     const extractAmenities = (content) => {
-        // Jika content kosong/null, return array kosong
         if (!content) return [];
-
         try {
-            // 1. Jika content sudah berupa array langsung
             if (Array.isArray(content)) {
                 return content.map(item => {
-                    // Format dari Filament: { item: "Nama Fasilitas" }
-                    if (item && typeof item === 'object' && item.item) {
-                        return item.item;
-                    }
-                    // Jika sudah string langsung
-                    if (typeof item === 'string') {
-                        return item;
-                    }
+                    if (item && typeof item === 'object' && item.item) return item.item;
+                    if (typeof item === 'string') return item;
                     return null;
-                }).filter(Boolean); // Hapus null/undefined
+                }).filter(Boolean);
             }
-
-            // 2. Jika content adalah string (JSON stringified)
             if (typeof content === 'string') {
                 const trimmed = content.trim();
-
-                // Cek jika string kosong
                 if (!trimmed) return [];
-
-                // Coba parse JSON
                 try {
                     const parsed = JSON.parse(trimmed);
                     if (Array.isArray(parsed)) {
                         return parsed.map(item => {
-                            if (item && typeof item === 'object' && item.item) {
-                                return item.item;
-                            }
-                            if (typeof item === 'string') {
-                                return item;
-                            }
+                            if (item && typeof item === 'object' && item.item) return item.item;
+                            if (typeof item === 'string') return item;
                             return null;
                         }).filter(Boolean);
                     }
-                    // Jika parsed adalah object, coba ambil values
                     if (parsed && typeof parsed === 'object') {
                         const values = Object.values(parsed);
                         return values.map(item => {
-                            if (item && typeof item === 'object' && item.item) {
-                                return item.item;
-                            }
-                            if (typeof item === 'string') {
-                                return item;
-                            }
+                            if (item && typeof item === 'object' && item.item) return item.item;
+                            if (typeof item === 'string') return item;
                             return null;
                         }).filter(Boolean);
                     }
                 } catch (e) {
-                    // Jika bukan JSON valid, anggap sebagai string biasa
-                    console.log("Content bukan JSON:", e);
                     return [];
                 }
             }
-
-            // 3. Jika content adalah object (bukan array)
             if (content && typeof content === 'object' && !Array.isArray(content)) {
                 const values = Object.values(content);
                 return values.map(item => {
-                    if (item && typeof item === 'object' && item.item) {
-                        return item.item;
-                    }
-                    if (typeof item === 'string') {
-                        return item;
-                    }
+                    if (item && typeof item === 'object' && item.item) return item.item;
+                    if (typeof item === 'string') return item;
                     return null;
                 }).filter(Boolean);
             }
         } catch (error) {
-            console.error("Error extracting amenities:", error, "Content:", content);
+            console.error("Error extracting amenities:", error);
         }
-
         return [];
     };
 
@@ -143,59 +85,86 @@ export default function FasilitasPerawatan({ facilities, pageTitle, pageDescript
                     </div>
                 </div>
 
-                {/* CONTENT */}
-                <div className="relative py-16 px-4 md:px-8 max-w-5xl mx-auto space-y-20">
+                {/* CONTENT SECTION */}
+                <div className="relative px-4 md:px-8 max-w-7xl mx-auto mb-28 space-y-12">
 
-                    {/* Background Decor */}
-                    <div className="absolute -top-32 -right-80 w-[32rem] h-[32rem] border-[38px] border-[#00b050] rounded-full opacity-80 z-0 hidden lg:block pointer-events-none"></div>
-                    <div className="absolute -bottom-56 -left-80 w-[32rem] h-[32rem] border-[38px] border-[#00b050] rounded-full opacity-80 z-0 hidden lg:block pointer-events-none"></div>
-                    {dataToShow.map((item, index) => {
-                        // Ekstrak daftar fasilitas dari content
-                        const amenitiesList = extractAmenities(item.content);
+                    {/* --- UPDATE: Background Decor Responsif --- */}
+                    {/* Lingkaran Kanan Atas */}
+                    <div className="absolute -top-16 -right-24 md:-top-32 md:-right-80 w-64 h-64 md:w-[32rem] md:h-[32rem] border-[20px] md:border-[38px] border-[#00b050] rounded-full opacity-50 md:opacity-80 z-0 pointer-events-none"></div>
+                    
+                    {/* Lingkaran Kiri Bawah */}
+                    <div className="absolute -bottom-16 -left-24 md:-bottom-56 md:-left-80 w-64 h-64 md:w-[32rem] md:h-[32rem] border-[20px] md:border-[38px] border-[#00b050] rounded-full opacity-50 md:opacity-80 z-0 pointer-events-none"></div>
+                    {/* ------------------------------------------ */}
+                    
+                    {dataToShow.length > 0 ? (
+                        dataToShow.map((item, index) => {
+                            const amenitiesList = extractAmenities(item.content);
 
-                        // Fallback ke mockup data jika tidak ada content dari database
-                        const finalAmenities = amenitiesList.length > 0 ? amenitiesList :
-                            (item.amenities || []);
+                            return (
+                                <div key={item.id || index} className="relative z-10">
+                                    {/* CARD CONTAINER */}
+                                    <div className="bg-white rounded-[30px] shadow-[0px_10px_40px_-10px_rgba(16,185,129,0.25)] hover:shadow-[0px_20px_60px_-15px_rgba(16,185,129,0.4)] overflow-hidden flex flex-col lg:flex-row min-h-[400px]">
+                                        
+                                        {/* BAGIAN GAMBAR (Kiri) */}
+                                        <div className="w-full lg:w-5/12 h-64 lg:h-auto relative bg-gray-100">
+                                            <img
+                                                src={getImageUrl(item.image_path)}
+                                                alt={item.title}
+                                                className="absolute inset-0 w-full h-full object-cover"
+                                                onError={(e) => { e.target.src = 'https://via.placeholder.com/800x400?text=Image+Error'; }}
+                                            />
+                                        </div>
 
-                        return (
-                            <div key={item.id || index} className="relative z-10 ">
-                                <div className="bg-white rounded-[30px] shadow-[0_10px_60px_-15px_#00A54F40] p-20 md:p-24 border border-gray-100">
+                                        {/* BAGIAN KONTEN (Kanan) */}
+                                        <div className="w-full lg:w-8/12 p-8 lg:p-12 flex flex-col justify-center">
+                                            
+                                            {/* Header Card */}
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                                <h2 className="text-3xl font-extrabold text-black tracking-wide">
+                                                    {item.title}
+                                                </h2>
+                                                <span className="bg-[#C8EAD9] text-[#00b050] px-6 py-1.5 rounded-full font-bold text-sm text-center w-fit">
+                                                    Fasilitas
+                                                </span>
+                                            </div>
 
-                                    <h2 className="text-3xl font-extrabold text-center text-black uppercase mb-10 tracking-wide">
-                                        {item.title}
-                                    </h2>
+                                            {/* Subtitle & List */}
+                                            <div className="mb-6">
+                                                <h3 className="text-xl font-bold text-black mb-4">
+                                                    Tersedia:
+                                                </h3>
 
-                                    <div className="w-full h-64 md:h-96 rounded-2xl overflow-hidden shadow-lg mb-8 bg-gray-200">
-                                        <img
-                                            src={getImageUrl(item.image_path)}
-                                            alt={item.title}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/800x400?text=Image+Error'; }}
-                                        />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <h3 className="text-xl font-bold text-black mb-4">
-                                            Tersedia:
-                                        </h3>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
-                                            {finalAmenities.length > 0 ? (
-                                                finalAmenities.map((text, i) => (
-                                                    <AmenityPill key={i} text={text} />
-                                                ))
-                                            ) : (
-                                                <p className="text-gray-500 italic col-span-2 text-center">
-                                                    Detail fasilitas belum ditambahkan.
-                                                </p>
-                                            )}
+                                                <div className="flex flex-wrap gap-3">
+                                                    {amenitiesList.length > 0 ? (
+                                                        amenitiesList.map((text, i) => (
+                                                            <AmenityPill key={i} text={text} />
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-gray-500 italic">
+                                                            Detail fasilitas belum ditambahkan.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="absolute -z-10 top-1/2 -right-10 w-20 h-20 bg-green-100 rounded-full blur-2xl opacity-50"></div>
+                            );
+                        })
+                    ) : (
+                        /* TAMPILAN KOSONG */
+                        <div className="relative z-10 w-full flex flex-col items-center justify-center min-h-[60vh] text-center bg-gray-50 rounded-[30px] border-2 border-dashed border-gray-200 p-8">
+                            <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
                             </div>
-                        );
-                    })}
+                            <h3 className="text-xl font-bold text-gray-700 mb-2">Belum Ada Data Fasilitas</h3>
+                            <p className="text-gray-500 font-medium max-w-md">
+                                Saat ini belum ada data fasilitas yang dipublikasikan.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="absolute bottom-0 right-0 translate-y-1/2 translate-x-1/4">
@@ -207,14 +176,15 @@ export default function FasilitasPerawatan({ facilities, pageTitle, pageDescript
     );
 }
 
+// KOMPONEN PIL KHUSUS
 const AmenityPill = ({ text }) => (
-    <div className="inline-flex items-center bg-[#00b050] rounded-full p-1 w-fit">
-        <div className="flex-shrink-0 bg-white rounded-full p-1.5 mr-3">
-            <svg className="w-4 h-4 text-[#00b050]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
+    <div className="inline-flex items-center bg-[#00b050] rounded-full pl-1.5 pr-5 py-1.5 shadow-sm">
+        <div className="flex-shrink-0 bg-white rounded-full w-6 h-6 flex items-center justify-center mr-3">
+            <svg className="w-3.5 h-3.5 text-[#00b050]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path>
             </svg>
         </div>
-        <span className="text-white font-semibold text-base pr-4">
+        <span className="text-white font-medium text-sm md:text-base leading-none pt-[1px]">
             {text}
         </span>
     </div>

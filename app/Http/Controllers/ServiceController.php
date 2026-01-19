@@ -18,24 +18,24 @@ class ServiceController extends Controller
             ->orderBy('is_featured', 'desc') // Unggulan (1) di atas, Biasa (0) di bawah
             ->latest('published_at')
             // Tambahkan 'is_featured' ke dalam select
-            ->get(['id', 'title', 'slug', 'excerpt', 'image_path', 'published_at', 'is_featured']);
+            ->get(['id', 'title', 'slug', 'excerpt','content', 'image_path', 'published_at', 'is_featured']);
 
         return Inertia::render('Service/Index', [
             'services' => $services,
         ]);
     }
 
-    /**
-     * Menampilkan detail satu layanan.
-     */
-    public function show($slug)
-    {
-        $service = Service::visible()
-            ->where('slug', $slug)
-            ->firstOrFail();
+    // /**
+    //  * Menampilkan detail satu layanan.
+    //  */
+    // public function show($slug)
+    // {
+    //     $service = Service::visible()
+    //         ->where('slug', $slug)
+    //         ->firstOrFail();
 
-        return Inertia::render('Service/Show', [
-            'service' => $service,
-        ]);
-    }
+    //     return Inertia::render('Service/Show', [
+    //         'service' => $service,
+    //     ]);
+    // }
 }

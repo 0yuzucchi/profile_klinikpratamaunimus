@@ -21,6 +21,10 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Public\JobVacancyController;
 use App\Http\Controllers\Public\JobApplicationController;
 use App\Http\Controllers\FacilityController;
+use App\Models\User;
+
+Route::middleware(['role:super_admin,kepala_rt,staff_rt,direktur,keuangan'])->group(function () {
+});
 
 Route::get('/bpjs', function () {
     return Inertia::render('Bpjs/Index');

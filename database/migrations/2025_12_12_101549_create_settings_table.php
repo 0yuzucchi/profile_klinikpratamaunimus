@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('settings', function (Blueprint $table) {
             $table->id();
             $table->text('vision')->nullable();
-            $table->text('mission')->nullable();
+            $table->json('mission')->nullable(); 
             $table->string('whatsapp_registration')->nullable();
             $table->string('whatsapp_information')->nullable();
             $table->string('email')->nullable();

@@ -19,11 +19,22 @@ use Illuminate\Support\HtmlString;
 use Filament\Forms\Components\Placeholder;
 use App\Models\Setting;
 use Filament\Forms\Set;
-
+use Filament\Tables\Columns\ImageColumn;
+use App\Traits\RestrictedResource; // <--- 1. Import Trait
+use App\Models\User; // <--- 1. Import User
 
 class JobVacancyResource extends Resource
 {
+    use RestrictedResource; // <--- 2. Pakai Trait
+
+    // <--- 3. Daftar Role (Mirip Middleware)
+    protected static ?array $allowedRoles = [
+        User::ROLE_HUMAS, 
+        // Super Admin sudah otomatis boleh di Trait
+    ];
+
     protected static ?string $model = JobVacancy::class;
+    protected static ?string $navigationLabel = 'Lowongan Pekerjaan';
     protected static ?string $navigationIcon = 'heroicon-o-briefcase';
 
 public static function form(Form $form): Form
@@ -39,6 +50,10 @@ public static function form(Form $form): Form
                                 ->label('Profesi / Posisi')
                                 ->required() 
                                 ->maxLength(255),
+                            Forms\Components\RichEditor::make('description')
+                                ->label('Deskripsi Lowongan')
+                                ->required()
+                                ->columnSpanFull(),
 
                             Forms\Components\Section::make('Poster Lowongan')
                                 ->schema([
@@ -178,7 +193,7 @@ public static function form(Form $form): Form
                 if ($state === 'email') {
                     $set('value', $setting?->email);
                 } elseif ($state === 'whatsapp') {
-                    $set('value', $setting?->whatsapp_registration);
+                    $set('value', $setting?->whatsapp_information);
                 }
             }),
 
@@ -207,8 +222,8 @@ public static function form(Form $form): Form
 
                 if ($type === 'email' && $setting?->email) {
                     $component->state($setting->email);
-                } elseif ($type === 'whatsapp' && $setting?->whatsapp_registration) {
-                    $component->state($setting->whatsapp_registration);
+                } elseif ($type === 'whatsapp' && $setting?->whatsapp_information) {
+                    $component->state($setting->whatsapp_information);
                 }
             })
             // ========================================================
@@ -236,9 +251,29 @@ public static function form(Form $form): Form
         return $table
             ->columns([
                 // --- TAMBAHAN BARU: PREVIEW GAMBAR DI TABEL ---
-                Tables\Columns\ImageColumn::make('poster_image')
-                    ->label('Poster')
-                    ->square(),
+                ImageColumn::make('poster_image')
+                ->label('Thumb')
+                ->square()
+                ->size(48)
+                ->getStateUsing(function ($record) {
+            
+                    $value = $record->poster_image;
+                    // Normalisasi kalau ternyata array
+                    if (is_array($value)) {
+                        $value = $value[0] ?? null;
+                    }
+            
+                    // Pastikan string URL
+                    if (is_string($value) && str_starts_with($value, 'http')) {
+                        // 🔑 INI KUNCI UTAMA: encode spasi
+                        return str_replace(' ', '%20', $value);
+                    }
+            
+                    return null;
+                })
+                ->extraImgAttributes([
+                    'class' => 'object-cover',
+                ]),
                 // ----------------------------------------------
 
                 Tables\Columns\TextColumn::make('profession')

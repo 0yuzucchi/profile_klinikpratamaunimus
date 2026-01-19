@@ -16,6 +16,7 @@ return new class extends Migration
 
             // 2. Poster Image (Wajib - Hapus nullable)
             $table->string('poster_image'); 
+            $table->longText('description');
 
             // 3. Sisanya Nullable (Opsional)
             $table->json('requirements')->nullable(); 

@@ -69,7 +69,7 @@ Mohon konfirmasinya, Terima kasih.`;
         <>
             <Head title="Pendaftaran Pasien" />
 
-            <div className="bg-white min-h-screen py-8 flex justify-center items-start">
+            <div className="bg-white min-h-screen py-8 flex justify-center items-start pb-24">
                 <div className="container px-4 max-w-3xl"> {/* Lebar dibatasi agar mirip mobile view/kartu */}
 
                     {/* Main Card Container */}

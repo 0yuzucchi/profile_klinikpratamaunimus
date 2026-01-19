@@ -18,9 +18,19 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
+use App\Traits\RestrictedResource; // <--- 1. Import Trait
+use App\Models\User; // <--- 1. Import User
 
 class SettingResource extends Resource
 {
+    use RestrictedResource; // <--- 2. Pakai Trait
+
+    // <--- 3. Daftar Role (Mirip Middleware)
+    protected static ?array $allowedRoles = [
+        User::ROLE_HUMAS, 
+        // Super Admin sudah otomatis boleh di Trait
+    ];
+
     protected static ?string $model = Setting::class;
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static ?string $navigationLabel = 'Pengaturan Website';
@@ -33,8 +43,26 @@ class SettingResource extends Resource
             ->schema([
                 // ... Section Visi & Misi, Kontak, Lokasi tidak berubah ...
                 Section::make('Visi & Misi')->collapsible()->schema([
-                    Textarea::make('vision')->label('Visi Perusahaan')->rows(3)->required(),
-                    Textarea::make('mission')->label('Misi Perusahaan')->rows(5)->helperText('Pisahkan setiap poin misi dengan baris baru.')->required(),
+                    Textarea::make('vision')->label('Visi Perusahaan')->rows(1)->required(),
+                    Repeater::make('mission')
+    ->label('Misi Perusahaan')
+    ->required()
+    ->schema([
+        Textarea::make('content')
+            ->label(false)
+            ->rows(2),
+    ])
+    ->itemLabel(function (array $state, string $uuid, Repeater $component): string {
+        $keys = array_keys($component->getState() ?? []);
+        $index = array_search($uuid, $keys, true);
+
+        return 'Misi ' . ($index + 1);
+    })
+    ->addActionLabel('Tambah Poin')
+    ->reorderable()          // hanya drag
+    ->collapsible()
+    ->cloneable()
+    ->columnSpanFull(),
                 ]),
 
                 Section::make('Informasi Kontak')->collapsible()->schema([

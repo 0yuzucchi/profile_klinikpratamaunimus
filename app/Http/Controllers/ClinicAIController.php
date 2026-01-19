@@ -1,510 +1,246 @@
 <?php
 
-// namespace App\Http\Controllers;
-
-// use App\Models\Doctor;
-// use Illuminate\Http\Request;
-// use Illuminate\Support\Facades\Cache;
-// use Illuminate\Support\Facades\Http;
-// use Illuminate\Support\Facades\Log;
-// use Illuminate\Support\Str;
-
-// class ClinicAIController extends Controller
-// {
-//     /**
-//      * URL endpoint untuk Gemini API. Diinisialisasi di constructor.
-//      * @var string
-//      */
-//     protected string $geminiApiUrl;
-
-//     /**
-//      * Informasi dasar dan statis tentang klinik.
-//      * @var array
-//      */
-//     private array $clinicContext = [
-//         'name' => 'Klinik Pratama Unimus',
-//         'address' => 'Jl. Petek Jl. Kp. Gayam, RT.02/RW.06, Dadapsari, Kec. Semarang Utara, Kota Semarang, Jawa Tengah 50173',
-//         'type' => 'Klinik Pratama (Klinik Kesehatan Primer)',
-//     ];
-
-//     /**
-//      * Constructor untuk menginisialisasi properti secara dinamis (cara yang benar).
-//      */
-//     public function __construct()
-//     {
-//         $apiKey = config('services.gemini.key', env('GOOGLE_AI_API_KEY'));
-//         // Menggunakan model 'gemini-1.5-flash' yang lebih modern dan cepat
-//         $this->geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
-//     }
-
-//     /**
-//      * Memproses query dari pengguna dan mengembalikan respons JSON terstruktur.
-//      *
-//      * @param Request $request
-//      * @return \Illuminate\Http\JsonResponse
-//      */
-//     public function processQuery(Request $request)
-//     {
-//         $query = strtolower($request->input('query', ''));
-//         $responseData = [];
-
-//         // Router logika untuk menentukan handler yang sesuai
-//         if ($this->isDoctorQuery($query)) {
-//             $responseData = $this->handleDoctorQuery($query);
-//         } elseif ($this->isTransportationQuery($query)) {
-//             $responseData = $this->handleTransportationQuery();
-//         } elseif ($this->isServiceQuery($query)) {
-//             $responseData = $this->handleServiceQuery();
-//         } else {
-//             $responseData = $this->handleAmbiguousQuery($query);
-//         }
-        
-//         // [PENTING] Memastikan semua handler mengembalikan format yang konsisten
-//         // Jika handler hanya mengembalikan string, bungkus ke dalam struktur standar.
-//         if (is_string($responseData)) {
-//             return response()->json(['reply' => ['text' => $responseData, 'suggestions' => []]]);
-//         }
-        
-//         // Jika handler sudah mengembalikan array (seperti handleAmbiguousQuery), langsung gunakan.
-//         return response()->json(['reply' => $responseData]);
-//     }
-    
-//     /**
-//      * [PERUBAHAN] Mengembalikan array terstruktur, bukan lagi string.
-//      */
-//     private function handleAmbiguousQuery($query)
-//     {
-//         return [
-//             'text' => "Maaf, saya kurang mengerti pertanyaan Anda. Mungkin Anda bisa mencoba salah satu pertanyaan di bawah ini:",
-//             'suggestions' => [
-//                 'Siapa saja dokter yang praktik?',
-//                 'Layanan apa saja yang tersedia?',
-//                 'Bagaimana cara ke klinik?',
-//                 'Minta alamat lengkap klinik',
-//             ]
-//         ];
-//     }
-
-//     private function handleTransportationQuery()
-//     {
-//         $cacheKey = 'clinic_transportation_info_v3';
-
-//         $geminiResponse = Cache::remember($cacheKey, now()->addDay(), function () {
-//             $prompt = "Anda adalah asisten virtual pemandu lokal ahli di Kota Semarang, Indonesia. Berikan informasi rute dan transportasi umum terbaik untuk menuju ke '{$this->clinicContext['name']}' yang beralamat di '{$this->clinicContext['address']}'. 
-//             Sertakan opsi berikut dengan detail yang jelas dan praktis:
-//             1. Trans Semarang: Sebutkan koridor yang relevan dan nama halte terdekat.
-//             2. Transportasi Online (Gojek/Grab): Beri tips mudah untuk titik penjemputan/tujuan.
-//             3. Kendaraan Pribadi: Beri rute umum dari landmark terkenal seperti Simpang Lima atau Tugu Muda.
-//             Gunakan format daftar poin yang mudah dibaca dan bahasa Indonesia yang natural.";
-
-//             return $this->generateTextFromGemini($prompt);
-//         });
-
-//         if (!$geminiResponse) {
-//             return "Maaf, terjadi sedikit gangguan saat mengambil informasi transportasi terkini. Silakan coba beberapa saat lagi.";
-//         }
-        
-//         $clinicMapsUrl = 'https://maps.app.goo.gl/gXQ7T1JNNh6sQd5j9';
-//         $fullResponse = "Tentu, ini adalah analisis rute terbaik dan terkini menuju {$this->clinicContext['name']}:\n\n";
-//         $fullResponse .= "📍 *Alamat:* {$this->clinicContext['address']}\n";
-//         $fullResponse .= "🗺️ *Google Maps:* {$clinicMapsUrl}\n\n";
-//         $fullResponse .= "*Rekomendasi Transportasi:*\n" . $geminiResponse;
-
-//         return $fullResponse; // Akan dibungkus oleh processQuery
-//     }
-
-//     private function handleServiceQuery()
-//     {
-//         $cacheKey = 'clinic_services_info_v3';
-        
-//         $geminiResponse = Cache::remember($cacheKey, now()->addWeek(), function () {
-//             $prompt = "Jelaskan layanan-layanan umum yang biasanya tersedia di sebuah '{$this->clinicContext['type']}' di Indonesia. 
-//             Contohnya termasuk Poli Umum, Poli Gigi, Kesehatan Ibu dan Anak (KIA), Laboratorium Sederhana, dan Apotek. 
-//             Buat dalam format daftar poin (bullet points) menggunakan tanda strip (-) dalam bahasa Indonesia yang jelas.";
-            
-//             return $this->generateTextFromGemini($prompt);
-//         });
-
-//         if (!$geminiResponse) {
-//             return "Maaf, terjadi sedikit gangguan saat mengambil informasi layanan kami. Silakan coba beberapa saat lagi.";
-//         }
-
-//         return "{$this->clinicContext['name']} adalah sebuah klinik pratama yang menyediakan berbagai layanan kesehatan primer. Secara umum, layanan yang tersedia adalah:\n" . $geminiResponse; // Akan dibungkus oleh processQuery
-//     }
-
-//     private function generateTextFromGemini(string $prompt): ?string
-//     {
-//         if (empty(config('services.gemini.key', env('GOOGLE_AI_API_KEY')))) {
-//             Log::error('>>> FATAL: GOOGLE_AI_API_KEY tidak ditemukan di file .env atau config.');
-//             return null;
-//         }
-
-//         $response = Http::timeout(60)
-//             ->withHeaders(['Content-Type' => 'application/json'])
-//             ->post($this->geminiApiUrl, [
-//                 'contents' => [['parts' => [['text' => $prompt]]]],
-//                 'safetySettings' => [
-//                     ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
-//                     ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
-//                     ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
-//                     ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE'],
-//                 ]
-//             ]);
-
-//         if ($response->successful()) {
-//             return data_get($response->json(), 'candidates.0.content.parts.0.text');
-//         }
-
-//         Log::error('>>> GAGAL: Google API Error', ['status' => $response->status(), 'body' => $response->body()]);
-//         return null;
-//     }
-
-//     private function handleDoctorQuery($query) { 
-//         $doctorName = $this->extractEntity($query, ['dokter', 'dr']);
-//         if ($doctorName) {
-//             $doctor = Doctor::with(['educations', 'subSpecializations', 'workExperiences'])->where('name', 'like', "%{$doctorName}%")->first();
-//             if (!$doctor) return "Maaf, dokter dengan nama yang mengandung '{$doctorName}' tidak ditemukan di database kami.";
-//             if (Str::contains($query, ['jadwal', 'kapan', 'jam'])) {
-//                 $schedule = $doctor->schedule ?? [];
-//                 if (empty(array_filter((array)$schedule))) return "{$doctor->name} belum memiliki jadwal praktik yang terdaftar.";
-//                 $response = "Berikut jadwal praktik untuk {$doctor->name} ({$doctor->specialization}):\n";
-//                 foreach ($schedule as $day => $time) $response .= "- " . ucfirst($day) . ": " . ($time ?: 'Libur') . "\n";
-//                 return $response;
-//             }
-//             if (Str::contains($query, ['pendidikan', 'lulusan'])) {
-//                 if ($doctor->educations->isEmpty()) return "Informasi pendidikan untuk {$doctor->name} belum tersedia.";
-//                 $response = "Riwayat pendidikan {$doctor->name}:\n";
-//                 foreach ($doctor->educations as $edu) $response .= "- {$edu->degree} dari {$edu->institution} (Tahun {$edu->year})\n";
-//                 return $response;
-//             }
-//             return $this->generateFullDoctorProfile($doctor);
-//         }
-//         $specialization = $this->extractEntity($query, ['spesialis', 'poli']);
-//         if ($specialization) {
-//             $doctors = Doctor::where('specialization', 'like', "%{$specialization}%")->get();
-//             if ($doctors->isEmpty()) return "Maaf, kami tidak memiliki dokter untuk poli {$specialization} saat ini.";
-//             $response = "Berikut dokter di poli {$specialization} yang kami miliki:\n";
-//             foreach($doctors as $doc) $response .= "- {$doc->name}\n";
-//             return $response;
-//         }
-//         $allDoctors = Doctor::orderBy('name')->get();
-//         if ($allDoctors->isEmpty()) return "Maaf, belum ada data dokter yang terdaftar saat ini.";
-//         $response = "Kami memiliki beberapa dokter yang praktik. Anda bisa menanyakan jadwal spesifik dengan format 'jadwal dokter [nama dokter]'.\n\nDokter kami:\n";
-//         foreach($allDoctors as $doc) $response .= "- {$doc->name} ({$doc->specialization})\n";
-//         return $response;
-//     }
-    
-//     private function isDoctorQuery($query) { return Str::contains($query, ['dokter', 'dr.', 'spesialis', 'praktik', 'jadwal', 'poli']); }
-//     private function isTransportationQuery($query) { return Str::contains($query, ['transportasi', 'lokasi', 'alamat', 'maps', 'ke sana', 'naik apa', 'rute', 'arah']); }
-//     private function isServiceQuery($query) { return Str::contains($query, ['layanan', 'fasilitas', 'bisa apa', 'tersedia']); }
-//     private function extractEntity($query, array $keywords) { foreach ($keywords as $keyword) { if (strpos($query, $keyword) !== false) { $potentialEntity = trim(substr($query, strpos($query, $keyword) + strlen($keyword))); return str_replace('?', '', $potentialEntity); } } return null; }
-    
-//     private function generateFullDoctorProfile(Doctor $doctor) { 
-//         $profile = "Berikut profil lengkap dari *{$doctor->name}*:\n\n"; 
-//         $profile .= "*{Spesialisasi/Poli}:* {$doctor->specialization}\n"; 
-//         if ($doctor->subSpecializations->isNotEmpty()) { 
-//             $subSpecs = $doctor->subSpecializations->pluck('name')->implode(', '); 
-//             $profile .= "*{Sub-spesialisasi}:* {$subSpecs}\n"; 
-//         } 
-//         $profile .= "\n*Deskripsi:*\n" . ($doctor->description ?: 'Informasi belum tersedia.') . "\n"; 
-//         if ($doctor->educations->isNotEmpty()) { 
-//             $profile .= "\n*Pendidikan:*\n"; 
-//             foreach ($doctor->educations as $edu) { 
-//                 $profile .= "- {$edu->degree}, {$edu->institution} ({$edu->year})\n"; 
-//             } 
-//         } 
-//         $profile .= "\nAnda bisa bertanya lebih detail seperti 'jadwal dokter {$doctor->name}'."; 
-//         return $profile; 
-//     }
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 namespace App\Http\Controllers;
 
 use App\Models\Doctor;
+use App\Models\Facility;
+use App\Models\Service;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Carbon\Carbon; // <-- Import Carbon untuk manajemen tanggal
+use Carbon\Carbon;
 
 class ClinicAIController extends Controller
 {
-    /**
-     * URL endpoint untuk Gemini API. Diinisialisasi di constructor.
-     * @var string
-     */
     protected string $geminiApiUrl;
 
-    /**
-     * Informasi dasar dan statis tentang klinik.
-     * @var array
-     */
-    private array $clinicContext = [
-        'name' => 'Klinik Pratama Unimus',
-        'address' => 'Jl. Petek Jl. Kp. Gayam, RT.02/RW.06, Dadapsari, Kec. Semarang Utara, Kota Semarang, Jawa Tengah 50173',
-        'type' => 'Klinik Pratama (Klinik Kesehatan Primer)',
-    ];
-
-    /**
-     * Constructor untuk menginisialisasi properti secara dinamis (cara yang benar).
-     */
     public function __construct()
     {
         $apiKey = config('services.gemini.key', env('GOOGLE_AI_API_KEY'));
-        // Menggunakan model 'gemini-1.5-flash' yang lebih modern dan cepat
+        // Menggunakan model flash untuk respons cepat
         $this->geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
     }
 
-    /**
-     * Memproses query dari pengguna dan mengembalikan respons JSON terstruktur.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function processQuery(Request $request)
     {
-        $query = strtolower($request->input('query', ''));
-        $responseData = [];
+        try {
+            $query = $request->input('query', '');
 
-        // Router logika untuk menentukan handler yang sesuai
-        if ($this->isDoctorQuery($query)) {
-            $responseData = $this->handleDoctorQuery($query);
-        } elseif ($this->isTransportationQuery($query)) {
-            $responseData = $this->handleTransportationQuery();
-        } elseif ($this->isServiceQuery($query)) {
-            $responseData = $this->handleServiceQuery();
-        } else {
-            $responseData = $this->handleAmbiguousQuery($query);
+            if (empty($query)) {
+                return response()->json([
+                    'reply' => [
+                        'text' => "Halo! Saya asisten virtual Klinik Pratama UNIMUS. Saya dapat membantu memberikan informasi jadwal dokter, pendaftaran, dan layanan poli.",
+                        'suggestions' => ['Jadwal Dokter Hari Ini', 'Nomor WA Pendaftaran', 'Layanan Poli Umum']
+                    ]
+                ]);
+            }
+
+            // Gunakan key cache baru (_v5) untuk memastikan struktur data baru termuat
+            $knowledgeBase = Cache::remember('clinic_ai_knowledge_base_v5', 600, function () {
+                return $this->buildKnowledgeBase();
+            });
+
+            $aiResponse = $this->askGemini($query, $knowledgeBase);
+
+            if (!$aiResponse) {
+                throw new \Exception("Tidak ada respon dari AI.");
+            }
+
+            return response()->json(['reply' => $aiResponse]);
+
+        } catch (\Exception $e) {
+            Log::error("ClinicAI Error: " . $e->getMessage());
+            return response()->json([
+                'reply' => [
+                    'text' => "Mohon maaf, saat ini sistem sedang sibuk. Silakan coba tanyakan 'Jadwal Dokter' atau 'Kontak'.",
+                    'suggestions' => ['Jadwal Dokter', 'Kontak Admin']
+                ]
+            ], 200);
         }
-        
-        // Memastikan semua handler mengembalikan format yang konsisten
-        if (is_string($responseData)) {
-            return response()->json(['reply' => ['text' => $responseData, 'suggestions' => []]]);
-        }
-        
-        return response()->json(['reply' => $responseData]);
     }
-    
-    /**
-     * [PERBAIKAN UTAMA] Logika dibuat lebih cerdas untuk menangani konteks.
-     */
-    private function handleDoctorQuery($query)
-    {
-        // Skenario 1: Pengguna menanyakan jadwal untuk "hari ini"
-        if (Str::contains($query, ['hari ini', 'sekarang'])) {
-            $todayIndonesian = $this->getTodayIndonesian();
-            $doctors = Doctor::all();
-            $practicingToday = [];
 
-            foreach ($doctors as $doctor) {
-                $schedule = (array) $doctor->schedule; // Pastikan schedule adalah array
-                if (!empty($schedule[$todayIndonesian])) {
-                    $practicingToday[] = [
-                        'name' => $doctor->name,
-                        'specialization' => $doctor->specialization,
-                        'time' => $schedule[$todayIndonesian]
-                    ];
+    private function buildKnowledgeBase(): string
+    {
+        $info = [];
+
+        // --- 1. SETTING (DISESUAIKAN DENGAN SettingResource) ---
+        $setting = Setting::first();
+        if ($setting) {
+            $info[] = "=== KONTAK & PENDAFTARAN ===";
+            $info[] = "Nama Klinik: Klinik Pratama UNIMUS";
+            $info[] = "Alamat: " . ($setting->address ?? 'Semarang');
+            
+            // [FIX] Mengambil langsung dari kolom database sesuai SettingResource
+            if (!empty($setting->whatsapp_registration)) {
+                $info[] = "Nomor WhatsApp Pendaftaran: {$setting->whatsapp_registration}";
+            }
+            if (!empty($setting->whatsapp_information)) {
+                $info[] = "Nomor WhatsApp Informasi: {$setting->whatsapp_information}";
+            }
+            if (!empty($setting->email)) {
+                $info[] = "Email: {$setting->email}";
+            }
+            
+            $info[] = ""; 
+        }
+
+        // --- 2. JADWAL DOKTER (DISESUAIKAN DENGAN DoctorResource) ---
+        $doctors = Doctor::get();
+        if ($doctors->count() > 0) {
+            $info[] = "=== DATA DOKTER & JADWAL ===";
+            
+            // Urutan hari untuk pengecekan yang rapi
+            $daysOrder = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
+
+            foreach ($doctors as $doc) {
+                // Handle spesialisasi (bisa array/tags atau string)
+                $specs = is_array($doc->specialization) ? implode(', ', $doc->specialization) : ($doc->specialization ?? 'Umum');
+                
+                $info[] = "Dokter: {$doc->name}";
+                $info[] = "Poli/Spesialis: {$specs}";
+
+                // [FIX] Parsing Jadwal JSON dari DoctorResource
+                $scheduleStr = [];
+                $scheduleData = $doc->schedule; // Asumsi di model ada protected $casts = ['schedule' => 'array'];
+
+                if (!empty($scheduleData) && is_array($scheduleData)) {
+                    foreach ($daysOrder as $dayKey) {
+                        // Cek apakah key hari ada dan memiliki jam start/end
+                        if (isset($scheduleData[$dayKey]['start']) && !empty($scheduleData[$dayKey]['start'])) {
+                            
+                            $start = $scheduleData[$dayKey]['start'];
+                            $end = $scheduleData[$dayKey]['end'] ?? 'Selesai';
+                            
+                            // Format: Senin (08:00 - 12:00)
+                            $scheduleStr[] = "- " . ucfirst($dayKey) . ": {$start} s/d {$end} WIB";
+                        }
+                    }
                 }
-            }
 
-            if (empty($practicingToday)) {
-                return "Berdasarkan data kami, sepertinya tidak ada dokter yang membuka praktik hari ini (" . ucfirst($todayIndonesian) . "). Anda bisa melihat daftar semua dokter yang kami miliki.";
+                if (!empty($scheduleStr)) {
+                    $info[] = "Jadwal Praktik:\n" . implode("\n", $scheduleStr);
+                } else {
+                    $info[] = "Jadwal Praktik: Belum tersedia, silakan hubungi WA Pendaftaran.";
+                }
+                $info[] = "---";
             }
-
-            $response = "Tentu, berikut adalah jadwal dokter yang praktik hari ini (" . ucfirst($todayIndonesian) . "):\n";
-            foreach ($practicingToday as $doc) {
-                $response .= "- {$doc['name']} ({$doc['specialization']}): {$doc['time']}\n";
-            }
-            return $response;
+            $info[] = "";
         }
 
-        // Skenario 2: Pengguna menanyakan "semua dokter"
-        if (Str::contains($query, 'semua dokter')) {
-            $allDoctors = Doctor::orderBy('name')->get();
-            if ($allDoctors->isEmpty()) return "Maaf, belum ada data dokter yang terdaftar saat ini.";
-
-            $response = "Berikut adalah daftar semua dokter yang terdaftar di klinik kami:\n";
-            foreach($allDoctors as $doc) {
-                $response .= "- {$doc->name} ({$doc->specialization})\n";
+        // --- 3. LAYANAN (DISESUAIKAN DENGAN ServiceResource) ---
+        // [FIX] Mengambil layanan aktif dan membersihkan HTML tags
+        $services = Service::where('status', 1)->get();
+        if ($services->count() > 0) {
+            $info[] = "=== LAYANAN MEDIS ===";
+            foreach ($services as $service) {
+                // Strip tags karena field 'content' adalah RichEditor
+                $cleanContent = strip_tags($service->content ?? '');
+                $cleanContent = preg_replace('/\s+/', ' ', $cleanContent); // Hapus spasi berlebih
+                $desc = Str::limit($cleanContent, 150); 
+                
+                $category = $service->is_featured ? "(Layanan Unggulan)" : "";
+                
+                $info[] = "Layanan: {$service->title} {$category}";
+                $info[] = "Info: {$desc}";
+                $info[] = "---";
             }
-            $response .= "\nAnda bisa menanyakan jadwal spesifik untuk salah satu dokter di atas.";
-            return $response;
+            $info[] = "";
         }
 
-        // Skenario 3: Mencari nama dokter spesifik (logika lama)
-        $doctorName = $this->extractEntity($query, ['dokter', 'dr']);
-        if ($doctorName) {
-            $doctor = Doctor::with(['educations', 'subSpecializations', 'workExperiences'])->where('name', 'like', "%{$doctorName}%")->first();
-            
-            if (!$doctor) {
-                // Jawaban jika dokter tidak ditemukan, dengan saran interaktif
+        // --- 4. FASILITAS ---
+        $facilities = Facility::where('status', 1)->get();
+        if ($facilities->count() > 0) {
+            $info[] = "=== FASILITAS ===";
+            foreach ($facilities as $facility) {
+                 // Handle jika content array atau string
+                 $desc = is_array($facility->content) ? implode(', ', $facility->content) : strip_tags($facility->content);
+                 $info[] = "- {$facility->title}: {$desc}";
+            }
+        }
+
+        return implode("\n", $info);
+    }
+
+    private function askGemini(string $userQuery, string $context): ?array
+    {
+        // [FIX] Paksa Timezone Jakarta agar "Pagi/Sore" akurat
+        date_default_timezone_set('Asia/Jakarta');
+        Carbon::setLocale('id');
+        
+        $now = Carbon::now('Asia/Jakarta');
+        $todayIndo = strtolower($now->translatedFormat('l')); // senin, selasa...
+        $fullDate = $now->translatedFormat('l, d F Y');
+        $currentTime = $now->format('H:i');
+        
+        // Tentukan periode waktu
+        $hour = $now->hour;
+        if ($hour >= 4 && $hour < 11) $sapaan = "Pagi";
+        elseif ($hour >= 11 && $hour < 15) $sapaan = "Siang";
+        elseif ($hour >= 15 && $hour < 18) $sapaan = "Sore";
+        else $sapaan = "Malam";
+
+        $systemPrompt = "
+        PERAN: Customer Service AI Klinik Pratama UNIMUS.
+        
+        WAKTU SEKARANG: 
+        Hari: $todayIndo (Gunakan ini untuk cek jadwal dokter hari ini)
+        Tanggal: $fullDate
+        Jam: $currentTime WIB ($sapaan)
+
+        DATA KLINIK (SUMBER KEBENARAN):
+        $context
+
+        ATURAN JAWABAN:
+        1. Jawablah pertanyaan \"$userQuery\" dengan singkat, padat, dan ramah.
+        2. JIKA DITANYA JADWAL HARI INI ($todayIndo): Cari dokter yang memiliki jadwal di hari '$todayIndo'. Jika tidak ada, katakan 'Tidak ada dokter yang praktik hari ini'.
+        3. JIKA DITANYA WA PENDAFTARAN: Berikan nomor 'WhatsApp Pendaftaran' dari data di atas.
+        4. JIKA DITANYA LAYANAN: Jelaskan layanan berdasarkan data 'LAYANAN MEDIS'.
+        5. Jangan mengarang informasi yang tidak ada di data.
+        6. Gunakan format list (bullet points) jika menyebutkan banyak item (seperti daftar dokter atau layanan).
+        ";
+
+        try {
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->post($this->geminiApiUrl, [
+                    'contents' => [['parts' => [['text' => $systemPrompt]]]],
+                    'generationConfig' => [
+                        'temperature' => 0.3, 
+                        'maxOutputTokens' => 10000, // [FIX] Token besar agar jawaban tidak terpotong
+                    ]
+                ]);
+
+            if ($response->successful()) {
+                $text = data_get($response->json(), 'candidates.0.content.parts.0.text');
                 return [
-                    'text' => "Maaf, dokter dengan nama yang mengandung '{$doctorName}' tidak ditemukan. Mungkin ada kesalahan penulisan?",
-                    'suggestions' => ['Lihat semua dokter', 'Jadwal dokter hari ini']
+                    'text' => $this->cleanFormatting(trim($text)),
+                    'suggestions' => $this->generateSuggestions($userQuery)
                 ];
+            } else {
+                Log::error('Gemini API Error: ' . $response->body());
+                return null;
             }
-            
-            // Sub-intent: jadwal, pendidikan, dll.
-            if (Str::contains($query, ['jadwal', 'kapan', 'jam'])) {
-                $schedule = $doctor->schedule ?? [];
-                if (empty(array_filter((array)$schedule))) return "{$doctor->name} belum memiliki jadwal praktik yang terdaftar.";
-                $response = "Berikut jadwal praktik untuk {$doctor->name} ({$doctor->specialization}):\n";
-                foreach ($schedule as $day => $time) $response .= "- " . ucfirst($day) . ": " . ($time ?: 'Libur') . "\n";
-                return $response;
-            }
-            if (Str::contains($query, ['pendidikan', 'lulusan'])) {
-                if ($doctor->educations->isEmpty()) return "Informasi pendidikan untuk {$doctor->name} belum tersedia.";
-                $response = "Riwayat pendidikan {$doctor->name}:\n";
-                foreach ($doctor->educations as $edu) $response .= "- {$edu->degree} dari {$edu->institution} (Tahun {$edu->year})\n";
-                return $response;
-            }
-            return $this->generateFullDoctorProfile($doctor);
-        }
-
-        // Skenario 4: Mencari berdasarkan spesialisasi
-        $specialization = $this->extractEntity($query, ['spesialis', 'poli']);
-        if ($specialization) {
-            $doctors = Doctor::where('specialization', 'like', "%{$specialization}%")->get();
-            if ($doctors->isEmpty()) return "Maaf, kami tidak memiliki dokter untuk poli {$specialization} saat ini.";
-            $response = "Berikut dokter di poli {$specialization} yang kami miliki:\n";
-            foreach($doctors as $doc) $response .= "- {$doc->name}\n";
-            return $response;
-        }
-
-        // Skenario 5: Fallback jika tidak ada yang cocok
-        return $this->handleAmbiguousQuery($query);
-    }
-
-    private function handleTransportationQuery()
-    {
-        $cacheKey = 'clinic_transportation_info_v3';
-        $geminiResponse = Cache::remember($cacheKey, now()->addDay(), function () {
-            $prompt = "Anda adalah asisten virtual pemandu lokal ahli di Kota Semarang, Indonesia. Berikan informasi rute dan transportasi umum terbaik untuk menuju ke '{$this->clinicContext['name']}' yang beralamat di '{$this->clinicContext['address']}'. 
-            Sertakan opsi berikut dengan detail yang jelas dan praktis:
-            1. Trans Semarang: Sebutkan koridor yang relevan dan nama halte terdekat.
-            2. Transportasi Online (Gojek/Grab): Beri tips mudah untuk titik penjemputan/tujuan.
-            3. Kendaraan Pribadi: Beri rute umum dari landmark terkenal seperti Simpang Lima atau Tugu Muda.
-            Gunakan format daftar poin yang mudah dibaca dan bahasa Indonesia yang natural.";
-            return $this->generateTextFromGemini($prompt);
-        });
-
-        if (!$geminiResponse) return "Maaf, terjadi sedikit gangguan saat mengambil informasi transportasi terkini. Silakan coba beberapa saat lagi.";
-        
-        $clinicMapsUrl = 'https://maps.app.goo.gl/gXQ7T1JNNh6sQd5j9';
-        $fullResponse = "Tentu, ini adalah analisis rute terbaik dan terkini menuju {$this->clinicContext['name']}:\n\n";
-        $fullResponse .= "📍 *Alamat:* {$this->clinicContext['address']}\n";
-        $fullResponse .= "🗺️ *Google Maps:* {$clinicMapsUrl}\n\n";
-        $fullResponse .= "*Rekomendasi Transportasi:*\n" . $geminiResponse;
-        return $fullResponse;
-    }
-
-    private function handleServiceQuery()
-    {
-        $cacheKey = 'clinic_services_info_v3';
-        $geminiResponse = Cache::remember($cacheKey, now()->addWeek(), function () {
-            $prompt = "Jelaskan layanan-layanan umum yang biasanya tersedia di sebuah '{$this->clinicContext['type']}' di Indonesia. 
-            Contohnya termasuk Poli Umum, Poli Gigi, Kesehatan Ibu dan Anak (KIA), Laboratorium Sederhana, dan Apotek. 
-            Buat dalam format daftar poin (bullet points) menggunakan tanda strip (-) dalam bahasa Indonesia yang jelas.";
-            return $this->generateTextFromGemini($prompt);
-        });
-
-        if (!$geminiResponse) return "Maaf, terjadi sedikit gangguan saat mengambil informasi layanan kami. Silakan coba beberapa saat lagi.";
-        
-        return "{$this->clinicContext['name']} adalah sebuah klinik pratama yang menyediakan berbagai layanan kesehatan primer. Secara umum, layanan yang tersedia adalah:\n" . $geminiResponse;
-    }
-
-    private function generateTextFromGemini(string $prompt): ?string
-    {
-        if (empty(config('services.gemini.key', env('GOOGLE_AI_API_KEY')))) {
-            Log::error('>>> FATAL: GOOGLE_AI_API_KEY tidak ditemukan di file .env atau config.');
+        } catch (\Exception $e) {
+            Log::error('Gemini Connection Error: ' . $e->getMessage());
             return null;
         }
-
-        $response = Http::timeout(60)
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post($this->geminiApiUrl, [
-                'contents' => [['parts' => [['text' => $prompt]]]],
-                'safetySettings' => [
-                    ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
-                    ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
-                    ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
-                    ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE'],
-                ]
-            ]);
-
-        if ($response->successful()) return data_get($response->json(), 'candidates.0.content.parts.0.text');
-
-        Log::error('>>> GAGAL: Google API Error', ['status' => $response->status(), 'body' => $response->body()]);
-        return null;
     }
 
-    private function handleAmbiguousQuery($query)
+    private function cleanFormatting($text)
     {
-        return [
-            'text' => "Maaf, saya kurang mengerti pertanyaan Anda. Mungkin Anda bisa mencoba salah satu pertanyaan di bawah ini:",
-            'suggestions' => [
-                'Jadwal dokter hari ini',
-                'Siapa saja dokter yang praktik?',
-                'Layanan apa saja yang tersedia?',
-                'Bagaimana cara ke klinik?',
-            ]
-        ];
-    }
-    
-    private function getTodayIndonesian(): string
-    {
-        Carbon::setLocale('id');
-        return strtolower(Carbon::now()->translatedFormat('l'));
+        // Membersihkan markdown yang berlebihan jika perlu
+        return str_replace(['**', '##'], '', $text);
     }
 
-    private function isDoctorQuery($query) { return Str::contains($query, ['dokter', 'dr.', 'spesialis', 'praktik', 'jadwal', 'poli']); }
-    private function isTransportationQuery($query) { return Str::contains($query, ['transportasi', 'lokasi', 'alamat', 'maps', 'ke sana', 'naik apa', 'rute', 'arah']); }
-    private function isServiceQuery($query) { return Str::contains($query, ['layanan', 'fasilitas', 'bisa apa', 'tersedia']); }
-    private function extractEntity($query, array $keywords) { foreach ($keywords as $keyword) { if (strpos($query, $keyword) !== false) { $potentialEntity = trim(substr($query, strpos($query, $keyword) + strlen($keyword))); return str_replace('?', '', $potentialEntity); } } return null; }
-    
-    private function generateFullDoctorProfile(Doctor $doctor) { 
-        $profile = "Berikut profil lengkap dari *{$doctor->name}*:\n\n"; 
-        $profile .= "*{Spesialisasi/Poli}:* {$doctor->specialization}\n"; 
-        if ($doctor->subSpecializations->isNotEmpty()) { 
-            $subSpecs = $doctor->subSpecializations->pluck('name')->implode(', '); 
-            $profile .= "*{Sub-spesialisasi}:* {$subSpecs}\n"; 
-        } 
-        $profile .= "\n*Deskripsi:*\n" . ($doctor->description ?: 'Informasi belum tersedia.') . "\n"; 
-        if ($doctor->educations->isNotEmpty()) { 
-            $profile .= "\n*Pendidikan:*\n"; 
-            foreach ($doctor->educations as $edu) { 
-                $profile .= "- {$edu->degree}, {$edu->institution} ({$edu->year})\n"; 
-            } 
-        } 
-        $profile .= "\nAnda bisa bertanya lebih detail seperti 'jadwal dokter {$doctor->name}'."; 
-        return $profile; 
+    private function generateSuggestions(string $query): array
+    {
+        $q = strtolower($query);
+        if (str_contains($q, 'dokter') || str_contains($q, 'jadwal')) return ['Cara Pendaftaran', 'Layanan BPJS', 'Lokasi Klinik'];
+        if (str_contains($q, 'daftar') || str_contains($q, 'wa')) return ['Jadwal Dokter', 'Syarat Pendaftaran'];
+        if (str_contains($q, 'layanan') || str_contains($q, 'poli')) return ['Jadwal Dokter', 'Fasilitas'];
+        
+        return ['Jadwal Dokter Hari Ini', 'Nomor WA Pendaftaran', 'Layanan Poli Umum'];
     }
 }

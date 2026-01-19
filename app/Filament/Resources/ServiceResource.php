@@ -15,9 +15,19 @@ use Illuminate\Support\Facades\Http;
 use Filament\Forms\Components\Placeholder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
+use App\Traits\RestrictedResource; // <--- 1. Import Trait
+use App\Models\User; // <--- 1. Import User
 
 class ServiceResource extends Resource
 {
+    use RestrictedResource; // <--- 2. Pakai Trait
+
+    // <--- 3. Daftar Role (Mirip Middleware)
+    protected static ?array $allowedRoles = [
+        User::ROLE_HUMAS, 
+        // Super Admin sudah otomatis boleh di Trait
+    ];
+
     protected static ?string $model = Service::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-briefcase'; 
@@ -41,6 +51,8 @@ class ServiceResource extends Resource
                                     ->afterStateUpdated(fn (string $operation, $state, Forms\Set $set) => $operation === 'create' ? $set('slug', Str::slug($state)) : null),
                                 
                                 Forms\Components\TextInput::make('slug')
+                                    ->disabled()
+                                    ->dehydrated()
                                     ->required()
                                     ->maxLength(255)
                                     ->unique(Service::class, 'slug', ignoreRecord: true),
@@ -64,6 +76,8 @@ class ServiceResource extends Resource
                                             ->image()
                                             ->imageEditor()
                                             ->required(fn (string $context): bool => $context === 'create')
+                                            // LOGIKA AGAR GAMBAR TIDAK HILANG SAAT EDIT
+                                            ->dehydrated(fn ($state) => filled($state))
                                             ->saveUploadedFileUsing(function (UploadedFile $file): ?string {
                                                 $fileName = time() . '_' . Str::slug($file->getClientOriginalName());
                                                 $bucketFolder = 'web-profile'; 
@@ -110,7 +124,7 @@ class ServiceResource extends Resource
                     ->schema([
                         Forms\Components\Section::make('Pengaturan')
                             ->schema([
-                                // Kolom Status Tayang
+                                // === PERUBAHAN: KEMBALI KE SELECT/DROPDOWN ===
                                 Forms\Components\Select::make('status')
                                     ->label('Status Publikasi')
                                     ->options([
@@ -118,9 +132,9 @@ class ServiceResource extends Resource
                                         0 => 'Draft',
                                     ])
                                     ->default(1)
+                                    ->native(false)
                                     ->required(),
 
-                                // Kolom Layanan Unggulan (BARU)
                                 Forms\Components\Select::make('is_featured')
                                     ->label('Jenis Layanan')
                                     ->options([
@@ -128,7 +142,9 @@ class ServiceResource extends Resource
                                         0 => 'Layanan Biasa',
                                     ])
                                     ->default(0) // Default Biasa
+                                    ->native(false)
                                     ->required(),
+                                // ==========================================
 
                                 Forms\Components\DateTimePicker::make('published_at')
                                     ->label('Tanggal Tayang')
@@ -143,15 +159,21 @@ class ServiceResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('image_path')->label('Gambar'),
-                
+                Tables\Columns\ImageColumn::make('image_path')
+                ->label('Gambar')
+                ->square()
+                ->getStateUsing(fn ($record) =>
+                    $record->image_path
+                        ? str_replace(' ', '%20', $record->image_path)
+                        : null
+                ),                
                 Tables\Columns\TextColumn::make('title')
                     ->label('Judul')
                     ->searchable()
                     ->sortable()
                     ->limit(30),
 
-                // Kolom Unggulan di Tabel
+                // === PERUBAHAN: KEMBALI KE TEXT & BADGE ===
                 Tables\Columns\TextColumn::make('is_featured')
                     ->label('Kategori')
                     ->formatStateUsing(fn (int $state): string => $state === 1 ? 'Unggulan' : 'Biasa')
@@ -161,15 +183,11 @@ class ServiceResource extends Resource
                         0 => 'gray',    // Warna abu untuk Biasa
                     })
                     ->sortable(),
+                // ===========================================
 
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
-                    ->formatStateUsing(fn (int $state): string => $state === 1 ? 'Aktif' : 'Draft')
-                    ->badge()
-                    ->color(fn (int $state): string => match ($state) {
-                        1 => 'success',
-                        0 => 'danger',
-                    }),
+                // TETAP MENGGUNAKAN SWITCH SESUAI PERMINTAAN SEBELUMNYA
+                Tables\Columns\ToggleColumn::make('status')
+                    ->label('Status'),
 
                 Tables\Columns\TextColumn::make('published_at')
                     ->label('Rilis')
@@ -180,10 +198,8 @@ class ServiceResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 
-                // --- TAMBAHAN TOMBOL HAPUS ---
                 Tables\Actions\DeleteAction::make()
                     ->before(function (Service $record) {
-                        // Cek apakah ada gambar, jika ada hapus dari Supabase
                         if ($record->image_path) {
                             $filePath = str_replace(env('SUPABASE_URL') . '/storage/v1/object/public/', '', $record->image_path);
                             
@@ -193,13 +209,11 @@ class ServiceResource extends Resource
                             ])->delete(env('SUPABASE_URL') . '/storage/v1/object/' . $filePath);
                         }
                     }),
-                // --- AKHIR TAMBAHAN ---
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        // --- TAMBAHAN LOGIKA HAPUS MASSAL ---
-                        ->before(function (Tables\Actions\DeleteBulkAction $action, \Illuminate\Database\Eloquent\Collection $records) {
+                        ->before(function (\Illuminate\Database\Eloquent\Collection $records) {
                             foreach ($records as $record) {
                                 if ($record->image_path) {
                                     $filePath = str_replace(env('SUPABASE_URL') . '/storage/v1/object/public/', '', $record->image_path);
@@ -211,7 +225,6 @@ class ServiceResource extends Resource
                                 }
                             }
                         }),
-                        // --- AKHIR TAMBAHAN ---
                 ]),
             ]);
     }

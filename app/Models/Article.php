@@ -54,7 +54,7 @@ class Article extends Model
     public function reviews(): HasMany
 {
     // PERUBAHAN: Gunakan angka 1 untuk memfilter ulasan yang terlihat
-    return $this->hasMany(ArticleReview::class)->where('is_visible', 1);
+    return $this->hasMany(ArticleReview::class);
 }
 
 // Relasi allReviews tidak perlu diubah
@@ -62,4 +62,17 @@ public function allReviews(): HasMany
 {
     return $this->hasMany(ArticleReview::class);
 }
+
+protected static function booted()
+{
+    static::saving(function ($article) {
+        logger()->info('MODEL: SAVING ARTICLE', [
+            'content_count' => is_array($article->content)
+                ? count($article->content)
+                : null,
+            'content' => $article->content,
+        ]);
+    });
+}
+
 }

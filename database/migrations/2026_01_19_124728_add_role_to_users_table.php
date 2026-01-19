@@ -11,9 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('articles', function (Blueprint $table) {
-            // Menggunakan tinyInteger untuk efisiensi. Konvensi: 1 = Tampil, 0 = Sembunyi/Draft
-            $table->tinyInteger('status')->default(1)->after('slug');
+        Schema::table('users', function (Blueprint $table) {
+            // Menambahkan kolom role setelah kolom email
+            // Kita beri default 'staff_rt' atau null, sesuai kebutuhan
+            $table->string('role')->default('staff_rt')->after('email_verified_at');
         });
     }
 
@@ -22,8 +23,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('articles', function (Blueprint $table) {
-            $table->dropColumn('status');
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('role');
         });
     }
 };

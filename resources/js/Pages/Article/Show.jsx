@@ -5,45 +5,60 @@ import { route } from 'ziggy-js';
 
 // =========================================================================
 // 1. KOMPONEN RENDERER (Penerjemah JSON Builder ke HTML)
+//    --- DISESUAIKAN UNTUK STRUKTUR DATA BARU ---
 // =========================================================================
 const ArticleContentRenderer = ({ content }) => {
     // A. Cek null/undefined
     if (!content) return <p className="text-gray-500 italic">Konten artikel belum tersedia.</p>;
 
-    // B. Support Backward Compatibility (Jika data lama masih string HTML biasa)
+    // B. Support Backward Compatibility
     if (typeof content === 'string') {
         return <div className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: content }} />;
     }
 
-    // C. Render JSON Array dari Filament Builder
+    // C. Render JSON Array
     if (Array.isArray(content)) {
         return (
-            <div className="space-y-8">
+            <div className="article-body w-full">
                 {content.map((block, index) => {
+                    const key = `${block.type}-${index}`;
                     
-                    // 1. Tipe: Paragraf Teks
+                    // =========================================================
+                    // 1. Tipe: Paragraf (PERBAIKAN JARAK ANTAR PARAGRAF DISINI)
+                    // =========================================================
                     if (block.type === 'paragraph') {
                         return (
                             <div 
-                                key={index} 
-                                className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed text-justify"
+                                key={key} 
+                                // Penjelasan Class:
+                                // [&>p]:mb-6          -> Memberikan margin bawah 1.5rem (jarak enter) ke setiap tag <p> di dalamnya
+                                // [&>p:last-child]:mb-0 -> Menghilangkan margin di paragraf terakhir agar tidak terlalu jauh ke elemen berikutnya
+                                // leading-loose       -> Membuat jarak antar baris kalimat lebih renggang (enak dibaca)
+                                // text-lg             -> Ukuran font sedikit lebih besar
+                                className="text-gray-700 text-lg leading-loose text-justify [&>p]:mb-6 [&>p:last-child]:mb-0 mb-8"
                                 dangerouslySetInnerHTML={{ __html: block.data.content }} 
                             />
                         );
                     }
 
-                    // 2. Tipe: Gambar Banner (Besar)
-                    if (block.type === 'image_banner') {
+                    // =========================================================
+                    // 2. Tipe: Image Banner
+                    // =========================================================
+                    if (block.type === 'image_banner' || block.type === 'image') {
+                        if (!block.data.url) return null;
+                        
                         return (
-                            <figure key={index} className="my-8 w-full">
-                                <img 
-                                    src={block.data.url} 
-                                    alt={block.data.caption || 'Gambar Artikel'} 
-                                    className="w-full h-auto rounded-lg shadow-sm object-cover"
-                                    onError={(e) => { e.target.style.display = 'none'; }} 
-                                />
+                            <figure key={key} className="my-10 w-full flex flex-col items-center">
+                                <div className="w-full rounded-2xl overflow-hidden shadow-md border border-gray-100">
+                                    <img 
+                                        src={block.data.url} 
+                                        alt={block.data.caption || 'Ilustrasi Artikel'} 
+                                        className="w-full h-auto object-cover"
+                                        loading="lazy"
+                                    />
+                                </div>
                                 {block.data.caption && (
-                                    <figcaption className="text-center text-sm text-gray-500 mt-2 italic">
+                                    <figcaption className="mt-3 text-center text-sm text-gray-500 italic px-4">
                                         {block.data.caption}
                                     </figcaption>
                                 )}
@@ -51,35 +66,18 @@ const ArticleContentRenderer = ({ content }) => {
                         );
                     }
 
-                    // 3. Tipe: Galeri Foto (Grid)
-                    if (block.type === 'gallery' && Array.isArray(block.data.images)) {
+                    // =========================================================
+                    // 3. Tipe: Gallery (Opsional)
+                    // =========================================================
+                    if (block.type === 'gallery' && block.data.images?.length > 0) {
                         return (
-                            <div key={index} className="grid grid-cols-2 md:grid-cols-3 gap-4 my-8">
-                                {block.data.images.map((imgUrl, imgIndex) => (
-                                    <div key={imgIndex} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group shadow-sm hover:shadow-md transition-shadow">
-                                        <img 
-                                            src={imgUrl} 
-                                            alt={`Galeri ${imgIndex}`} 
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                            onError={(e) => { e.target.style.display = 'none'; }} 
-                                        />
+                            <div key={key} className="my-10 grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {block.data.images.map((imageUrl, imgIndex) => (
+                                    <div key={imgIndex} className="aspect-square bg-gray-100 rounded-lg overflow-hidden shadow-sm">
+                                        <img src={imageUrl} alt="Galeri" className="w-full h-full object-cover hover:scale-105 transition duration-500" />
                                     </div>
                                 ))}
                             </div>
-                        );
-                    }
-
-                    // 4. Tipe: Kutipan (Quote)
-                    if (block.type === 'quote') {
-                        return (
-                            <blockquote key={index} className="border-l-4 border-green-500 pl-4 py-3 my-8 bg-green-50 rounded-r-lg italic text-gray-800 text-lg">
-                                "{block.data.text}"
-                                {block.data.author && (
-                                    <footer className="text-sm font-bold text-gray-600 mt-2 not-italic">
-                                        — {block.data.author}
-                                    </footer>
-                                )}
-                            </blockquote>
                         );
                     }
 
@@ -92,8 +90,10 @@ const ArticleContentRenderer = ({ content }) => {
     return null;
 };
 
+
+
 // =========================================================================
-// 2. SIDEBAR ARTIKEL LAIN
+// 2. SIDEBAR ARTIKEL LAIN (TIDAK ADA PERUBAHAN)
 // =========================================================================
 const OtherArticlesSidebar = ({ articles }) => (
     <div className="mb-10">
@@ -144,7 +144,7 @@ const OtherArticlesSidebar = ({ articles }) => (
 const EMOJIS = ['😄', '🙂', '😐', '🙁', '😠', '😢'];
 
 // =========================================================================
-// 3. FORM ULASAN (INPUT)
+// 3. FORM ULASAN (TIDAK ADA PERUBAHAN)
 // =========================================================================
 const ReviewForm = ({ articleSlug }) => {
     const { data, setData, post, processing, errors, recentlySuccessful } = useForm({
@@ -232,7 +232,7 @@ const ReviewForm = ({ articleSlug }) => {
 };
 
 // =========================================================================
-// 4. SECTION KOMENTAR
+// 4. SECTION KOMENTAR (TIDAK ADA PERUBAHAN)
 // =========================================================================
 const CommentsSection = ({ reviews, reactionCounts, articleSlug }) => {
     const reactions = [
@@ -298,7 +298,7 @@ const CommentsSection = ({ reviews, reactionCounts, articleSlug }) => {
 };
 
 // =========================================================================
-// 5. HALAMAN UTAMA (Article Show)
+// 5. HALAMAN UTAMA (TIDAK ADA PERUBAHAN)
 // =========================================================================
 export default function ArticleShow(props) {
     // Handling Props agar aman (defensive coding)
@@ -338,7 +338,7 @@ export default function ArticleShow(props) {
             </div>
 
             <div className="bg-white py-16">
-                <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+                <div className="container mx-auto mb-20 px-4 sm:px-6 max-w-7xl">
                     <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
 
                         {/* KOLOM KIRI: KONTEN ARTIKEL */}
@@ -371,7 +371,6 @@ export default function ArticleShow(props) {
                             )}
 
                             {/* --- CONTENT RENDERER (DINAMIS) --- */}
-                            {/* Bagian ini menggantikan text hardcoded dummy */}
                             <ArticleContentRenderer content={article.content} />
 
                         </div>

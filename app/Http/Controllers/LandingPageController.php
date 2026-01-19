@@ -75,42 +75,21 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Setting;
+use App\Models\Service;
+use App\Models\Article; // <--- PENTING: Tambahkan Import Model Article
+use App\Models\Doctor;
+use App\Models\Facility; // <--- JANGAN LUPA IMPORT MODEL INI
+
 
 class LandingPageController extends Controller
 {
     /**
      * Metode terpusat untuk mengambil data pengaturan.
-     * Menggunakan firstOrCreate untuk memastikan selalu ada data yang dikembalikan
-     * dan mencegah error jika tabel 'settings' masih kosong.
-     *
-     * @return \App\Models\Setting
      */
     private function getSettingsData()
     {
@@ -124,25 +103,45 @@ class LandingPageController extends Controller
      */
     public function index()
     {
-        // Data services bisa tetap di sini jika tidak dinamis
-        $services = [
-            ['id' => 1, 'name' => 'Konsultasi Dokter Umum'],
-            ['id' => 2, 'name' => 'Pemeriksaan Laboratorium'],
-            ['id' => 3, 'name' => 'Vaksinasi'],
-            ['id' => 4, 'name' => 'Kesehatan Ibu & Anak'],
-        ];
+        $doctors = Doctor::limit(3)->get(); 
+        $settings = Setting::first(); 
+        $facilities = Facility::where('status', 1)
+            ->where('published_at', '<=', now())
+            ->orderBy('published_at', 'desc')
+            ->get();
 
-        // Data cadangan jika API gagal atau tidak ada ulasan
+
+
+        // 1. Mengambil data Layanan (Service)
+        $services = Service::query()
+            ->where('status', 1)              // Hanya ambil yang statusnya "Tampilkan"
+            ->orderBy('is_featured', 'desc')  // Urutkan "Unggulan" (1) paling atas
+            ->orderBy('published_at', 'desc') // Kemudian urutkan yang terbaru
+            ->get();
+
+        // 2. Mengambil data Artikel (Article) --- BARU ---
+        $articles = Article::query()
+            ->where('status', 1)              // Hanya ambil yang statusnya aktif/published
+            ->orderBy('published_at', 'desc') // Urutkan dari yang paling baru
+            ->limit(3)                        // Batasi hanya 3 artikel untuk tampilan Home
+            ->get();
+
+        // Data cadangan ulasan (opsional/biarkan saja)
         $googleReviews = [
-            ['id' => 1, 'name' => 'Belum Ada Ulasan', 'avatar' => '/images/avatar-default.jpg', 'rating' => 5, 'text' => 'Jadilah yang pertama memberikan ulasan untuk layanan kami di Google!', 'time' => 'Baru saja'],
+            ['id' => 1, 'name' => 'Pasien Umum', 'avatar' => null, 'rating' => 5, 'text' => 'Pelayanan sangat ramah dan tempatnya nyaman.', 'time' => 'Baru saja'],
         ];
 
         return Inertia::render('LandingPage', [
-            'services' => $services,
+            'services'      => $services,
+            'articles'      => $articles, // <--- Kirim data artikel ke React Props
             'googleReviews' => $googleReviews,
-            'testimonials' => array_slice($googleReviews, 0, 2),
-            // Mengambil data setting dari database
-            'settings' => $this->getSettingsData()
+            'testimonials'  => array_slice($googleReviews, 0, 2),
+            'settings'      => $this->getSettingsData(),
+            'doctors' => $doctors,
+            'settings' => $settings, 
+            'facilities' => $facilities, 
+
+
         ]);
     }
 }

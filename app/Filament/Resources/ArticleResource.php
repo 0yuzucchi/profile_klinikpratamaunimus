@@ -11,230 +11,284 @@ use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\ToggleColumn;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Builder;
-use Filament\Forms\Components\Hidden; // Import Hidden
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\ImageColumn;
-use Filament\Tables\Columns\ToggleColumn;
-use Filament\Support\Colors\Color; // Import Color
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Log;
+use Filament\Forms\Components\Toggle;
+use App\Traits\RestrictedResource; // <--- 1. Import Trait
+use App\Models\User; // <--- 1. Import User
 
 class ArticleResource extends Resource
 {
+    use RestrictedResource; // <--- 2. Pakai Trait
+
+    // <--- 3. Daftar Role (Mirip Middleware)
+    protected static ?array $allowedRoles = [
+        User::ROLE_HUMAS, 
+        // Super Admin sudah otomatis boleh di Trait
+    ];
+
     protected static ?string $model = Article::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $navigationLabel = 'Artikel & Berita';
+    protected static ?string $navigationLabel = 'Artikel';
 
+    /* =========================================================
+     | FORM
+     ========================================================= */
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\Group::make()
-                    ->schema([
-                        Forms\Components\Section::make('Judul & Konten')
-                            ->schema([
-                                Forms\Components\TextInput::make('title')
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->reactive()
-                                    ->afterStateUpdated(fn ($state, callable $set) => $set('slug', Str::slug($state))),
-                                
-                                Forms\Components\TextInput::make('slug')
-                                    ->required()
-                                    ->unique(Article::class, 'slug', ignoreRecord: true),
+        return $form->schema([
+            Forms\Components\Group::make()->schema([
+                Forms\Components\Section::make('Konten Utama')->schema([
 
-                                // --- BUILDER STRUKTUR ---
-                                Builder::make('content')
-                                    ->label('Isi Artikel')
-                                    ->blocks([
-                                        // 1. BLOK TEKS
-                                        Builder\Block::make('paragraph')
-                                            ->label('Paragraf')
-                                            ->schema([
-                                                Forms\Components\RichEditor::make('content')
-                                                    ->label('Teks')
-                                                    ->required(),
-                                            ]),
+                    Forms\Components\TextInput::make('title')
+                        ->label('Judul Artikel')
+                        ->required()
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn ($state, Set $set) => $set('slug', Str::slug($state))),
 
-                                        // 2. BLOK GAMBAR BANNER (FIXED: PREVIEW & REPLACE)
-                                        Builder\Block::make('image_banner')
-                                            ->label('Gambar Banner')
-                                            ->schema([
-                                                // A. Field Penyimpan URL (Hidden)
-                                                Hidden::make('url'),
+                    Forms\Components\TextInput::make('slug')
+                        ->required()
+                        ->readOnly()
+                        ->unique(Article::class, 'slug', ignoreRecord: true),
 
-                                                // B. Preview Gambar Saat Ini
-                                                Placeholder::make('preview_banner')
-                                                    ->label('Preview Gambar Saat Ini')
-                                                    ->content(function (Get $get) {
-                                                        $url = $get('url'); // Ambil dari hidden field
-                                                        if (!$url) {
-                                                            return new HtmlString('<div style="padding:10px; background:#f3f4f6; border-radius:8px; color:#6b7280;">Belum ada gambar yang diupload.</div>');
-                                                        }
-                                                        return new HtmlString('
-                                                            <div style="margin-bottom: 10px;">
-                                                                <img src="'.$url.'" style="width: 100%; max-height: 250px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
-                                                                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 4px;">Gambar aktif saat ini.</div>
-                                                            </div>
-                                                        ');
-                                                    }),
+                    Forms\Components\Textarea::make('excerpt')
+                        ->label('Ringkasan')
+                        ->required()
+                        ->maxLength(160),
 
-                                                // C. Uploader (Hanya untuk GANTI gambar)
-                                                Forms\Components\FileUpload::make('attachment')
-                                                    ->label('Ganti Gambar (Opsional)')
-                                                    ->helperText('Upload gambar baru HANYA jika ingin mengganti yang lama.')
-                                                    ->image()
-                                                    ->imageEditor()
-                                                    // Logic Upload Supabase
-                                                    ->saveUploadedFileUsing(fn (UploadedFile $file) => self::uploadToSupabase($file))
-                                                    // Setelah upload sukses, set nilai ke Hidden Field 'url'
-                                                    ->afterStateUpdated(function ($state, Set $set) {
-                                                        if ($state) {
-                                                            // Handle jika return array (kadang terjadi di Filament)
-                                                            $newUrl = is_array($state) ? array_values($state)[0] : $state;
-                                                            $set('url', $newUrl);
-                                                        }
-                                                    })
-                                                    // Jangan simpan field 'attachment' ini ke database JSON, kita cuma butuh 'url'
-                                                    ->dehydrated(false),
-                                                
-                                                Forms\Components\TextInput::make('caption')
-                                                    ->label('Keterangan Gambar'),
-                                            ]),
+                    /* =============================
+                     | THUMBNAIL
+                     ============================= */
+                    Forms\Components\Section::make('Thumbnail Utama')->schema([
 
-                                        // 3. BLOK GALERI
-                                        Builder\Block::make('gallery')
-                                            ->label('Galeri Foto')
-                                            ->schema([
-                                                // A. Simpan Array Gambar (Hidden tidak support array native di builder dgn mudah, kita pakai FileUpload langsung tapi dihandle hati-hati)
-                                                // Khusus Gallery, kita pakai FileUpload biasa tapi dengan Preview Placeholder di atasnya agar user yakin datanya ada.
-                                                
-                                                Placeholder::make('gallery_preview')
-                                                    ->label('Foto Tersimpan')
-                                                    ->content(function (Get $get) {
-                                                        $images = $get('images');
-                                                        if (!$images) return 'Belum ada foto.';
-                                                        // Pastikan array
-                                                        if (!is_array($images)) $images = [$images];
-
-                                                        $html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-bottom: 10px;">';
-                                                        foreach ($images as $img) {
-                                                            if(is_string($img)) {
-                                                                $html .= '<a href="'.$img.'" target="_blank"><img src="'.$img.'" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; border: 1px solid #eee;"></a>';
-                                                            }
-                                                        }
-                                                        $html .= '</div>';
-                                                        return new HtmlString($html);
-                                                    }),
-
-                                                Forms\Components\FileUpload::make('images')
-                                                    ->label('Upload / Tambah Foto')
-                                                    ->multiple()
-                                                    ->image()
-                                                    ->reorderable()
-                                                    ->appendFiles() // Agar tidak menimpa langsung saat nambah
-                                                    ->saveUploadedFileUsing(fn (UploadedFile $file) => self::uploadToSupabase($file)),
-                                            ]),
-
-                                        // 4. BLOK KUTIPAN
-                                        Builder\Block::make('quote')
-                                            ->label('Kutipan')
-                                            ->schema([
-                                                Forms\Components\Textarea::make('text')->rows(3),
-                                                Forms\Components\TextInput::make('author'),
-                                            ]),
-                                    ])
-                                    ->collapsible(),
-                            ]),
-                    ])->columnSpan(['lg' => 2]),
-
-                Forms\Components\Group::make()
-                    ->schema([
-                        Forms\Components\Section::make('Pengaturan')
-                            ->schema([
-                                Toggle::make('status')
-                                    ->label('Tampilkan')
-                                    ->default(true)
-                                    ->onColor('success')
-                                    ->offColor('danger'),
-
-                                Forms\Components\DateTimePicker::make('published_at')->default(now()),
-                                Forms\Components\TextInput::make('author')->required(),
-                                
-                                // --- PREVIEW & UPLOAD THUMBNAIL UTAMA ---
-                                // 1. Simpan URL asli di Hidden Field
-                                Hidden::make('image_path'),
-
-                                // 2. Tampilkan Preview Gambar Lama
-                                Placeholder::make('thumb_preview')
-                                    ->label('Thumbnail Saat Ini')
-                                    ->content(function ($record, Get $get) {
-                                        // Coba ambil dari state form dulu (live), kalau null ambil dari record
-                                        $url = $get('image_path'); 
-                                        
-                                        if (!$url && $record) $url = $record->image_path;
-
-                                        if (!$url) {
-                                            return new HtmlString('<div class="text-xs text-gray-500 italic">Belum ada thumbnail.</div>');
+                        Placeholder::make('thumb_preview')
+                                    ->label('Pratinjau Thumbnail')
+                                    ->content(function (?Article $record, Get $get) {
+                                        $url = $get('image_path');
+                                        if (!$url && $record) {
+                                            $url = $record->image_path;
                                         }
-                                        return new HtmlString('
-                                            <div style="text-align:center; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px dashed #d1d5db;">
-                                                <img src="'.$url.'" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                                <p style="font-size: 10px; color: #6b7280; margin-top: 5px;">Gambar aktif</p>
-                                            </div>
-                                        ');
-                                    }),
+                                        if ($url && is_string($url)) {
+                                            return new HtmlString('<img src="' . e($url) . '" style="max-width: 100%; border-radius: 6px; object-fit: cover;">');
+                                        }
+                                        return new HtmlString('<div class="text-xs text-gray-500 italic">Belum ada thumbnail.</div>');
+                                    })
+                                    ->live(),
 
-                                // 3. Uploader untuk GANTI gambar
-                                Forms\Components\FileUpload::make('thumbnail_upload')
-                                    ->label('Ganti Thumbnail')
-                                    ->helperText('Kosongkan jika tidak ingin mengubah thumbnail.')
+                                Forms\Components\FileUpload::make('image_path')
+                                    ->label('Upload Thumbnail')
+                                    ->helperText('Upload baru akan menggantikan thumbnail yang ada.')
                                     ->image()
                                     ->imageEditor()
-                                    // Logic Upload
+                                    ->live() // Memicu update pada Placeholder di atas
+                                    ->dehydrated(fn ($state) => filled($state))
                                     ->saveUploadedFileUsing(fn (UploadedFile $file) => self::uploadToSupabase($file))
-                                    // Update hidden field 'image_path' setelah upload
-                                    ->afterStateUpdated(function ($state, Set $set) {
-                                        if ($state) {
-                                             // Handle array return
-                                             $url = is_array($state) ? array_values($state)[0] : $state;
-                                             $set('image_path', $url);
-                                        }
-                                    })
-                                    // Tidak disimpan ke DB kolom 'thumbnail_upload' (karena kolom itu gak ada)
-                                    ->dehydrated(false)
-                                    // Required hanya saat Create, tapi kita cek hidden fieldnya
-                                    ->required(fn ($context) => $context === 'create' && request()->missing('image_path')), 
-                                
-                                Forms\Components\Textarea::make('excerpt')
-                                    ->label('Ringkasan Singkat')
-                                    ->rows(3)
-                                    ->maxLength(160),
-                            ]),
-                    ])->columnSpan(['lg' => 1]),
-            ])->columns(3);
+                                    ->deleteUploadedFileUsing(fn (?string $state) => self::deleteFromSupabase($state)),
+                    ]),
+
+                    /* =============================
+                     | CONTENT BUILDER (INTI)
+                     ============================= */
+                     Builder::make('content')
+                     ->label('Isi Pengumuman')
+                     ->collapsible()
+                     ->blocks([
+                         Builder\Block::make('paragraph')
+                             ->label('Paragraf Teks')
+                             ->icon('heroicon-o-bars-3-bottom-left')
+                             ->schema([
+                                 Forms\Components\RichEditor::make('content')->label(false)->required(),
+                             ]),
+
+                         Builder\Block::make('image_banner')
+                             ->label('Gambar Banner')
+                             ->icon('heroicon-o-photo')
+                             ->schema([
+                                 // 1. CUSTOM PREVIEW (Untuk menampilkan gambar besar)
+                                 Placeholder::make('banner_preview')
+                                     ->label('Pratinjau Banner')
+                                     ->content(function (Get $get) {
+                                         $state = $get('url');
+                                         $urlToDisplay = null;
+                 
+                                         // --- LOGIC EKSTRAKSI URL ---
+                                         // 1. Cek jika data adalah Array (Mode Edit / Data Tersimpan)
+                                         if (is_array($state)) {
+                                             $firstItem = array_values($state)[0] ?? null;
+                                             if (is_string($firstItem)) {
+                                                 $urlToDisplay = $firstItem; // URL dari Database
+                                             } elseif (is_object($firstItem) && method_exists($firstItem, 'temporaryUrl')) {
+                                                 $urlToDisplay = $firstItem->temporaryUrl(); // Upload baru (multiple)
+                                             }
+                                         }
+                                         // 2. Cek jika data adalah Object (Upload baru single)
+                                         elseif (is_object($state) && method_exists($state, 'temporaryUrl')) {
+                                             $urlToDisplay = $state->temporaryUrl();
+                                         }
+                                         // 3. Cek jika data adalah String (Fallback)
+                                         elseif (is_string($state) && !empty($state)) {
+                                             $urlToDisplay = $state;
+                                         }
+                 
+                                         // --- RENDER HTML ---
+                                         if ($urlToDisplay) {
+                                             return new HtmlString('
+                                                 <div style="margin-top: 5px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #f9fafb;">
+                                                     <img src="' . e($urlToDisplay) . '" style="width: 100%; max-height: 400px; object-fit: contain; display: block;">
+                                                     <div class="px-2 py-1 text-xs text-green-700 bg-green-50 border-t border-green-100">
+                                                         ✓ Gambar aktif
+                                                     </div>
+                                                 </div>
+                                             ');
+                                         }
+                 
+                                         // Jika kosong
+                                         return new HtmlString('
+                                             <div class="flex items-center justify-center p-4 border border-dashed border-gray-300 rounded bg-gray-50 text-gray-400 text-sm">
+                                                 <span>Belum ada gambar banner.</span>
+                                             </div>
+                                         ');
+                                     })
+                                     ->live(), // Wajib live agar update saat upload
+                 
+                                 // 2. INPUT FILE UPLOAD
+                                 Forms\Components\FileUpload::make('url')
+                                     ->label('Upload Gambar')
+                                     ->multiple()
+                                     ->maxFiles(1)
+                                     ->image()
+                                     ->imageEditor()
+                                     ->live()
+                                     ->multiple(false)
+                                 
+                                     ->afterStateUpdated(function ($state, Set $set) {
+
+                                         Log::info('[FILEUPLOAD UPDATED - RAW]', [
+                                             'type'  => gettype($state),
+                                             'value' => $state,
+                                         ]);
+                                 
+                                         /**
+                                          * $state bisa berupa:
+                                          * - array UUID => url lama
+                                          * - array UUID => TemporaryUploadedFile
+                                          * - array campuran
+                                          *
+                                          * Kita PAKSA:
+                                          * - buang semua state lama
+                                          * - simpan HANYA item TERAKHIR
+                                          */
+                                         if (is_array($state)) {
+                                             $values = array_values($state);
+                                             $latest = end($values);
+                                 
+                                             Log::info('[FILEUPLOAD UPDATED - REPLACED]', [
+                                                 'kept' => $latest,
+                                             ]);
+                                 
+                                             // 🔥 INI KUNCI UTAMA
+                                             $set('url', [$latest]);
+                                         }
+                                     })
+
+                                     ->saveUploadedFileUsing(function ($file) {
+
+                                         Log::info('[UPLOAD SUPABASE]', [
+                                             'name' => $file->getClientOriginalName(),
+                                         ]);
+                                 
+                                         return self::uploadToSupabase($file);
+                                     })
+                                 
+                                     ->deleteUploadedFileUsing(function ($state) {
+                                 
+                                         Log::warning('[DELETE OLD FILE]', [
+                                             'state' => $state,
+                                         ]);
+                                 
+                                         if (is_array($state)) {
+                                             foreach ($state as $file) {
+                                                 self::deleteFromSupabase($file);
+                                             }
+                                         } elseif (is_string($state)) {
+                                             self::deleteFromSupabase($state);
+                                         }
+                                     })
+                                 
+                                     ->dehydrateStateUsing(function ($state) {
+                                 
+                                         if (is_array($state)) {
+                                             return array_values($state)[0] ?? null;
+                                         }
+                                 
+                                         return $state;
+                                     }),
+
+                 
+                                 Forms\Components\TextInput::make('caption')
+                                     ->label('Keterangan Gambar (Caption)'),
+                             ]),
+                     ])
+                     ->required(),
+                ]),
+            ])->columnSpan(['lg' => 2]),
+
+            Forms\Components\Group::make()->schema([
+                Forms\Components\Section::make('Publikasi')->schema([
+                    Toggle::make('status')->default(true),
+                    Forms\Components\DateTimePicker::make('published_at')->default(now()),
+                    Forms\Components\TextInput::make('author')->required(),
+                ]),
+            ])->columnSpan(['lg' => 1]),
+        ])->columns(3);
     }
 
-    // --- Helper Functions tetap sama ---
+    /* =========================================================
+     | TABLE
+     ========================================================= */
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                ImageColumn::make('image_path')->square()->label('Thumb'),
-                TextColumn::make('title')->searchable()->limit(30),
+                Tables\Columns\ImageColumn::make('image_path')
+                    ->label('Thumb')
+                    ->square()
+                    ->getStateUsing(fn ($record) =>
+                        $record->image_path
+                            ? str_replace(' ', '%20', $record->image_path)
+                            : null
+                    ),
+
+                    Tables\Columns\TextColumn::make('title')->searchable()->sortable()->limit(50),
                 ToggleColumn::make('status'),
-                TextColumn::make('published_at')->date(),
+                Tables\Columns\TextColumn::make('published_at')->date(),
             ])
-            ->filters([])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->before(function (Article $record) {
+                        if ($record->image_path) {
+                            self::deleteFromSupabase($record->image_path);
+                        }
+                        if (is_array($record->content)) {
+                            foreach ($record->content as $block) {
+                                if ($block['type'] === 'image_banner' && !empty($block['data']['url'])) {
+                                    self::deleteFromSupabase($block['data']['url']);
+                                }
+                            }
+                        }
+                    }),
+            ]);
     }
-    
+
     public static function getPages(): array
     {
         return [
@@ -244,18 +298,36 @@ class ArticleResource extends Resource
         ];
     }
 
-    protected static function uploadToSupabase(UploadedFile $file): ?string 
+    protected static function uploadToSupabase(UploadedFile $file): string
     {
-        $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-        $response = Http::withHeaders([
-            'apikey' => env('SUPABASE_KEY'),
-            'Authorization' => 'Bearer ' . env('SUPABASE_KEY'),
-            'Content-Type' => $file->getMimeType(),
-        ])->withBody(file_get_contents($file->getRealPath()), $file->getMimeType())
-          ->post(env('SUPABASE_URL') . '/storage/v1/object/web-profile/' . $fileName);
+        $fileName = 'articles/' . time() . '_' . Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
+        $bucket = env('SUPABASE_BUCKET', 'web-profile');
+        $uploadResponse = Http::withHeaders([
+            'apikey' => env('SUPABASE_KEY'), 'Authorization' => 'Bearer ' . env('SUPABASE_KEY'),
+        ])->withBody(
+            file_get_contents($file->getRealPath()),
+            $file->getMimeType()
+        )->post(env('SUPABASE_URL') . '/storage/v1/object/' . $bucket . '/' . $fileName);
+
+        if ($uploadResponse->failed()) {
+            throw new \Exception('Gagal Upload ke Supabase: ' . $uploadResponse->body());
+        }
         
-        return $response->successful() 
-            ? env('SUPABASE_URL') . '/storage/v1/object/public/web-profile/' . $fileName 
-            : null;
+        $publicUrl = env('SUPABASE_URL') . '/storage/v1/object/public/' . $bucket . '/' . $fileName;
+        return $publicUrl;
+    }
+
+    protected static function deleteFromSupabase(?string $url): void
+    {
+        if (!$url || !is_string($url) || !Str::contains($url, 'storage/v1/object/public')) {
+            return;
+        }
+
+        $bucket = env('SUPABASE_BUCKET', 'web-profile');
+        $filePath = $bucket . '/' . Str::after($url, '/storage/v1/object/public/' . $bucket . '/');
+
+        Http::withHeaders([
+            'apikey' => env('SUPABASE_KEY'), 'Authorization' => 'Bearer ' . env('SUPABASE_KEY'),
+        ])->delete(env('SUPABASE_URL') . '/storage/v1/object/' . $filePath);
     }
 }

@@ -24,5 +24,6 @@ class Setting extends Model
         // Ini akan secara otomatis mengubah array PHP ke JSON saat menyimpan,
         // dan sebaliknya saat mengambil data.
         'social_media' => 'array',
+        'mission' => 'array',
     ];
 }

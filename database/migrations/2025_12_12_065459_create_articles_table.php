@@ -18,9 +18,10 @@ return new class extends Migration
             $table->string('author')->nullable();
             $table->string('image_path')->nullable();
             $table->text('excerpt');
-            $table->longText('content');
+            $table->json('content');
             $table->timestamp('published_at')->nullable();
             $table->timestamps();
+            $table->tinyInteger('status')->default(1)->after('slug');
         });
     }
 

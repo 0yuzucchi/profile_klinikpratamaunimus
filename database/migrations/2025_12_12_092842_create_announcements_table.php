@@ -20,7 +20,7 @@ return new class extends Migration
             // Menggunakan tinyInteger untuk status. Konvensi: 1 = Tampil, 0 = Sembunyi/Draft
             $table->tinyInteger('status')->default(1)->comment('1 = Tampil, 0 = Sembunyi');
 
-            $table->string('excerpt')->nullable(); // Ringkasan singkat untuk preview
+            $table->text('excerpt'); // Ringkasan singkat untuk preview
             $table->longText('content'); // Konten utama pengumuman
             $table->string('image_path')->nullable(); // Path ke gambar banner pengumuman
             $table->timestamp('published_at')->nullable(); // Tanggal publikasi
