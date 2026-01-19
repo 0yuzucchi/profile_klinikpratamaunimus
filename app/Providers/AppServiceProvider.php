@@ -19,8 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (config('app.env') === 'production') {
-        URL::forceScheme('https');
+        // Kode ini akan memaksa URL menjadi HTTPS di Vercel
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
         }
     }
 }
