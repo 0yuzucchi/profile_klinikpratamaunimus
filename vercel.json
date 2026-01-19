@@ -31,7 +31,6 @@
         "LOG_CHANNEL": "stderr",
         "SESSION_DRIVER": "cookie",
 
-        "APP_KEY": "@app_key",
         "DB_CONNECTION": "@db_connection",
         "DB_HOST": "@db_host",
         "DB_PORT": "@db_port",
