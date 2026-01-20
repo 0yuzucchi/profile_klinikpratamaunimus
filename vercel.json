@@ -18,16 +18,20 @@
             "dest": "/public/js/$1"
         },
         {
-            "src": "/images/(.*)",
-            "dest": "/public/images/$1"
-        },
-        {
             "src": "/storage/(.*)",
             "dest": "/public/storage/$1"
         },
         {
-            "src": "/livewire/(.*)",
-            "dest": "/api/index.php"
+            "src": "/images/(.*)",
+            "dest": "/public/images/$1"
+        },
+        {
+            "src": "/favicon.ico",
+            "dest": "/public/favicon.ico"
+        },
+        {
+            "src": "/robots.txt",
+            "dest": "/public/robots.txt"
         },
         {
             "src": "/(.*)",
@@ -37,7 +41,7 @@
     "env": {
         "APP_ENV": "production",
         "APP_DEBUG": "false",
-        "APP_URL": "https://${VERCEL_URL}",
+        "APP_URL": "https://klinikunimus.vercel.app",
         "APP_CONFIG_CACHE": "/tmp/config.php",
         "APP_EVENTS_CACHE": "/tmp/events.php",
         "APP_PACKAGES_CACHE": "/tmp/packages.php",
