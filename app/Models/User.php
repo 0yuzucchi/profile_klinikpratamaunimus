@@ -9,7 +9,7 @@ use Illuminate\Notifications\Notifiable;
 
 // TAMBAHKAN INI:
 use Filament\Models\Contracts\FilamentUser;
-use Filament\Panels\Panel;
+use Filament\Panel;
 
 class User extends Authenticatable implements FilamentUser
 {
@@ -17,9 +17,9 @@ class User extends Authenticatable implements FilamentUser
     use HasFactory, Notifiable;
 
     public function canAccessPanel(Panel $panel): bool
-    {
-        return true; // BUKA DULU TANPA SYARAT
-    }
+{
+    return true;
+}
 
     // --- DEFINISI ROLE AGAR KONSISTEN ---
     const ROLE_SUPER_ADMIN = 'super_admin'; // Bisa akses Web Profile & Inventaris
