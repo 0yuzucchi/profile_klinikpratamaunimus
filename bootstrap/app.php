@@ -23,6 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => CheckRole::class,
         ]);
 
+                $middleware->validateCsrfTokens(except: [
+            'livewire/*', 
+            'admin/*', // Bypass CSRF untuk admin filament sementara
+        ]);
+
         // Daftarkan semua middleware web di satu tempat agar rapi
         $middleware->web(append: [
             HandleInertiaRequests::class,

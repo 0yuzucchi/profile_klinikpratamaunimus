@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use Livewire\Livewire; // <--- PASTIKAN IMPORT INI ADA
 
 
 class AppServiceProvider extends ServiceProvider
@@ -32,8 +33,23 @@ class AppServiceProvider extends ServiceProvider
     if (env('APP_ENV') !== 'local') {
         URL::forceScheme('https');
         
-        // Fix tambahan untuk Livewire agar tidak 403
-        request()->server->set('HTTPS', true);
+        
     }
+
+    $appUrl = config('app.url'); // Mengambil dari APP_URL di .env
+
+        if (env('APP_ENV') !== 'local' && $appUrl) {
+            Livewire::setUpdateRoute(function ($handle) use ($appUrl) {
+                return \Illuminate\Support\Facades\Route::post("{$appUrl}/livewire/update", $handle)
+                    ->middleware([
+                        'web',
+                        'universal',
+                    ]);
+            });
+
+            Livewire::setScriptRoute(function ($handle) use ($appUrl) {
+                return \Illuminate\Support\Facades\Route::get("{$appUrl}/livewire/livewire.js", $handle);
+            });
+        }
 }
 }
