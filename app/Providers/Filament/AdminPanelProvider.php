@@ -136,7 +136,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-                // CheckAdminPanelAccess::class, // <-- 2. DAFTARKAN SEBAGAI CLASS STRING
+                CheckAdminPanelAccess::class, // <-- 2. DAFTARKAN SEBAGAI CLASS STRING
             ]);
     }
 }
