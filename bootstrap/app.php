@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withPaths([
+    // ... path lainnya
+    'storage' => base_path('storage'), // Pastikan ini ada
+])
     ->withMiddleware(function (Middleware $middleware) {
         
         // Daftarkan alias di sini
@@ -31,3 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
+    // Tambahkan kode ini setelah ->create();
+if (isset($_SERVER['VERCEL'])) {
+    $app->useStoragePath(storage_path: '/tmp/storage');
+}
+return $app;
