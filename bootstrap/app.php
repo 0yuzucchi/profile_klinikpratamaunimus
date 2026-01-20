@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
             // Biarkan pengecualian yang sudah ada, tidak apa-apa
     $middleware->validateCsrfTokens(except: [
         'admin/login',
+                'livewire/*',  // Tambahkan ini untuk membantu Livewire
+
     ]);
 
         // Daftarkan semua middleware web di satu tempat agar rapi
