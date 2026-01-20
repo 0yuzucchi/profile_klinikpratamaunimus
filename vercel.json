@@ -1,22 +1,29 @@
 {
     "version": 2,
     "framework": null,
+    "public": true,
     "functions": {
         "api/index.php": {
-            "runtime": "vercel-php@0.7.2"
+            "runtime": "vercel-php@0.7.2",
+            "memory": 1024
         }
     },
     "routes": [
-        { "src": "/build/(.*)", "dest": "/public/build/" },
-        { "src": "/(.*)", "dest": "/api/index.php" }
+        {
+            "src": "/build/(.*)",
+            "dest": "public/build/$1"
+        },
+        {
+            "src": "/storage/(.*)",
+            "dest": "public/storage/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "api/index.php"
+        }
     ],
-    "public": true,
-    "buildCommand": "vite build",
+    "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan filament:assets && php artisan storage:link && npm install && npm run build",
     "outputDirectory": "public",
-    "scripts": {
-        "vercel-pre-build": "composer install --no-dev --optimize-autoloader && php artisan config:clear && php artisan route:clear && php artisan view:clear",
-        "vercel-build": "npm install && npm run build && php artisan storage:link --force && php artisan filament:assets"
-    },
     "env": {
         "APP_ENV": "production",
         "APP_DEBUG": "false",
@@ -28,12 +35,8 @@
         "APP_ROUTES_CACHE": "/tmp/routes.php",
         "APP_SERVICES_CACHE": "/tmp/services.php",
         "VIEW_COMPILED_PATH": "/tmp",
-
         "CACHE_DRIVER": "array",
         "LOG_CHANNEL": "stderr",
         "SESSION_DRIVER": "cookie"
-
-
     }
-    
 }
