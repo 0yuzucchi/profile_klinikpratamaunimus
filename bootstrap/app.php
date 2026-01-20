@@ -7,7 +7,6 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\HandleInertiaRequests; // <--- TAMBAHKAN BARIS INI
-use App\Http\Middleware\CheckAdminPanelAccess; // <-- 1. IMPORT MIDDLEWARE
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,10 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class,
         ]);
-
-            $middleware->remove(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
-
-    // Biarkan pengecualian yang sudah ada, tidak apa-apa
+            // Biarkan pengecualian yang sudah ada, tidak apa-apa
     $middleware->validateCsrfTokens(except: [
         'admin/login',
     ]);
