@@ -23,6 +23,12 @@ use App\Http\Controllers\Public\JobApplicationController;
 use App\Http\Controllers\FacilityController;
 use App\Models\User;
 
+
+Route::get('/test-session', function () {
+    session(['test' => 'ok']);
+    return session('test');
+});
+
 Route::middleware(['role:super_admin,kepala_rt,staff_rt,direktur,keuangan'])->group(function () {
 });
 
