@@ -84,9 +84,10 @@
 // }
 
 
-
 namespace App\Providers\Filament;
 
+use App\Models\User;
+use Closure; // <-- 1. Tambahkan use statement ini
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -98,13 +99,16 @@ use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Http\Request; // <-- 2. Tambahkan use statement ini
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Models\User; // <-- Pastikan User model di-import
+use Symfony\Component\HttpFoundation\Response; // <-- 3. Tambahkan use statement ini
 
 class AdminPanelProvider extends PanelProvider
 {
+    // Trait dan properti $allowedRoles dihapus karena tidak digunakan oleh Filament untuk otorisasi panel
+    
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -134,7 +138,7 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
-                // AuthenticateSession::class, // AuthenticateSession sering menyebabkan masalah di Vercel, bisa dicoba untuk dinonaktifkan jika masih error
+                // AuthenticateSession::class, // Sering menyebabkan masalah di Vercel, bisa dicoba dinonaktifkan
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,
                 SubstituteBindings::class,
@@ -143,14 +147,25 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ])
-            // --- INI ADALAH BAGIAN KUNCI UNTUK OTORISASI ---
-            ->canAccessPanel(function (User $user) {
-                // Hanya user dengan role super_admin atau kepala_rt yang bisa mengakses panel ini.
-                return in_array($user->role, [
-                    User::ROLE_SUPER_ADMIN,
-                    User::ROLE_KEPALA_RT,
-                ]);
-            });
+                // --- INI ADALAH LOGIKA OTORISASI YANG BARU ---
+                function (Request $request, Closure $next): Response {
+                    $user = $request->user();
+
+                    // Tentukan role yang diizinkan
+                    $allowedRoles = [
+                        User::ROLE_SUPER_ADMIN,
+                        User::ROLE_KEPALA_RT,
+                    ];
+
+                    // Jika user tidak login atau rolenya tidak diizinkan, tolak akses
+                    if (! $user || ! in_array($user->role, $allowedRoles)) {
+                        abort(403, 'Akses Ditolak.');
+                    }
+
+                    // Jika diizinkan, lanjutkan
+                    return $next($request);
+                },
+                // ---------------------------------------------
+            ]);
     }
 }
