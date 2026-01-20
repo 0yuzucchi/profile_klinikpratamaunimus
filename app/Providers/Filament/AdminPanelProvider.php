@@ -1,9 +1,93 @@
 <?php
 
+// namespace App\Providers\Filament;
+
+// use Filament\Http\Middleware\Authenticate;
+// use Filament\Http\Middleware\AuthenticateSession;
+// use Filament\Http\Middleware\DisableBladeIconComponents;
+// use Filament\Http\Middleware\DispatchServingFilamentEvent;
+// use Filament\Pages;
+// use Filament\Panel;
+// use Filament\PanelProvider;
+// use Filament\Support\Colors\Color;
+// use Filament\Widgets;
+// use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+// use Illuminate\Cookie\Middleware\EncryptCookies;
+// use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+// use Illuminate\Routing\Middleware\SubstituteBindings;
+// use Illuminate\Session\Middleware\StartSession;
+// use Illuminate\View\Middleware\ShareErrorsFromSession;
+// use App\Traits\RestrictedResource; // <--- 1. Import Trait
+// use App\Models\User; // <--- 1. Import User
+
+// class AdminPanelProvider extends PanelProvider
+// {
+//     use RestrictedResource; // <--- 2. Pakai Trait
+
+//     // <--- 3. Daftar Role (Mirip Middleware)
+//     protected static ?array $allowedRoles = [
+//         User::ROLE_SUPER_ADMIN, 
+//         User::ROLE_KEPALA_RT, 
+//     ];
+
+//     public function panel(Panel $panel): Panel
+// {
+//     return $panel
+//         ->default()
+//         ->id('admin')
+//         ->path('admin')
+//         ->login()
+//         ->brandName('Klinik Pratama Inventory')
+//         ->font('Poppins') 
+//         ->colors([
+//             'primary' => Color::Emerald,
+//         ])
+//         // GANTI DI SINI
+//         ->sidebarCollapsibleOnDesktop() 
+//         ->databaseNotifications()
+//             ->darkMode(true) // Mengaktifkan fitur Dark Mode
+            
+//             // --- Layout & Navigasi ---
+//             ->breadcrumbs(true)    // Menampilkan navigasi jejak halaman
+//             ->databaseNotifications() // Mengaktifkan ikon lonceng notifikasi
+            
+//             // --- Resources & Pages ---
+//             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
+//             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+//             ->pages([
+//                 Pages\Dashboard::class,
+//             ])
+            
+//             // --- Widgets ---
+//             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+//             ->widgets([
+//                 Widgets\AccountWidget::class,
+//                 // Widgets\FilamentInfoWidget::class, // DINONAKTIFKAN agar dasbor tidak penuh iklan
+//             ])
+            
+//             // --- Middleware ---
+//             ->middleware([
+//                 EncryptCookies::class,
+//                 AddQueuedCookiesToResponse::class,
+//                 StartSession::class,
+//                 AuthenticateSession::class,
+//                 ShareErrorsFromSession::class,
+//                 VerifyCsrfToken::class,
+//                 SubstituteBindings::class,
+//                 DisableBladeIconComponents::class,
+//                 DispatchServingFilamentEvent::class,
+//             ])
+//             ->authMiddleware([
+//                 Authenticate::class,
+//             ]);
+//     }
+// }
+
+
+
 namespace App\Providers\Filament;
 
 use Filament\Http\Middleware\Authenticate;
-use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
@@ -17,60 +101,40 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Traits\RestrictedResource; // <--- 1. Import Trait
-use App\Models\User; // <--- 1. Import User
+use App\Models\User; // <-- Pastikan User model di-import
 
 class AdminPanelProvider extends PanelProvider
 {
-    use RestrictedResource; // <--- 2. Pakai Trait
-
-    // <--- 3. Daftar Role (Mirip Middleware)
-    protected static ?array $allowedRoles = [
-        User::ROLE_SUPER_ADMIN, 
-        User::ROLE_KEPALA_RT, 
-    ];
-
     public function panel(Panel $panel): Panel
-{
-    return $panel
-        ->default()
-        ->id('admin')
-        ->path('admin')
-        ->login()
-        ->brandName('Klinik Pratama Inventory')
-        ->font('Poppins') 
-        ->colors([
-            'primary' => Color::Emerald,
-        ])
-        // GANTI DI SINI
-        ->sidebarCollapsibleOnDesktop() 
-        ->databaseNotifications()
-            ->darkMode(true) // Mengaktifkan fitur Dark Mode
-            
-            // --- Layout & Navigasi ---
-            ->breadcrumbs(true)    // Menampilkan navigasi jejak halaman
-            ->databaseNotifications() // Mengaktifkan ikon lonceng notifikasi
-            
-            // --- Resources & Pages ---
+    {
+        return $panel
+            ->default()
+            ->id('admin')
+            ->path('admin')
+            ->login()
+            ->brandName('Klinik Pratama Inventory')
+            ->font('Poppins')
+            ->colors([
+                'primary' => Color::Emerald,
+            ])
+            ->sidebarCollapsibleOnDesktop()
+            ->databaseNotifications()
+            ->darkMode(true)
+            ->breadcrumbs(true)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
-            
-            // --- Widgets ---
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                // Widgets\FilamentInfoWidget::class, // DINONAKTIFKAN agar dasbor tidak penuh iklan
             ])
-            
-            // --- Middleware ---
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
-                AuthenticateSession::class,
+                // AuthenticateSession::class, // AuthenticateSession sering menyebabkan masalah di Vercel, bisa dicoba untuk dinonaktifkan jika masih error
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,
                 SubstituteBindings::class,
@@ -79,6 +143,14 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            // --- INI ADALAH BAGIAN KUNCI UNTUK OTORISASI ---
+            ->canAccessPanel(function (User $user) {
+                // Hanya user dengan role super_admin atau kepala_rt yang bisa mengakses panel ini.
+                return in_array($user->role, [
+                    User::ROLE_SUPER_ADMIN,
+                    User::ROLE_KEPALA_RT,
+                ]);
+            });
     }
 }

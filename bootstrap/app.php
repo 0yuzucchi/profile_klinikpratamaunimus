@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'admin/login', // <-- URL login panel Anda
+            // 'stripe/*', // <-- Contoh jika Anda butuh URL lain
+        ]);
 
         // Daftarkan semua middleware web di satu tempat agar rapi
         $middleware->web(append: [
