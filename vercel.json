@@ -2,7 +2,7 @@
     "version": 2,
     "framework": null,
     "functions": {
-        "api/index.php": { "runtime": "vercel-php@0.7.2" }
+        "api/index.php": { "runtime": "vercel-php@0.7.0" }
     },
     "routes": [
         {
@@ -10,12 +10,8 @@
             "dest": "/public/build/$1"
         },
         {
-            "src": "/css/(.*)",
-            "dest": "/public/css/$1"
-        },
-        {
-            "src": "/js/(.*)",
-            "dest": "/public/js/$1"
+            "src": "/livewire/(.*)",
+            "dest": "/api/index.php"
         },
         {
             "src": "/storage/(.*)",
@@ -27,6 +23,9 @@
         },
         {
             "src": "/(.*)",
+            "headers": {
+                "Cache-Control": "no-cache"
+            },
             "dest": "/api/index.php"
         }
     ],
