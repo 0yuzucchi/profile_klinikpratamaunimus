@@ -32,16 +32,18 @@ return [
 
         'local' => [
             'driver' => 'local',
-        'root' => (env('APP_ENV') === 'production') ? '/tmp/storage/app' : storage_path('app'),
-            'serve' => true,
+        'root' => (isset($_SERVER['VERCEL_JOB_ID']) || env('APP_ENV') === 'production') 
+                    ? '/tmp/storage/app' 
+                    : storage_path('app'),            'serve' => true,
             'throw' => false,
             'report' => false,
         ],
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => env('APP_URL') . '/storage',
+      'root' => (isset($_SERVER['VERCEL_JOB_ID']) || env('APP_ENV') === 'production') 
+                    ? '/tmp/storage/app/public' 
+                    : storage_path('app/public'),            'url' => env('APP_URL') . '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
