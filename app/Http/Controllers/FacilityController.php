@@ -55,4 +55,46 @@ class FacilityController extends Controller
             'facility' => $facility,
         ]);
     }
+
+    public function apiIndexByCategory($category)
+    {
+        // --- PERBAIKAN KONSISTENSI: Gunakan konstanta dari model ---
+        $validCategories = [Facility::CATEGORY_PERAWATAN, Facility::CATEGORY_PENUNJANG];
+        if (!in_array($category, $validCategories)) {
+            return response()->json(['message' => 'Invalid category'], 400);
+        }
+
+        $facilities = Facility::visible()
+            ->where('category', $category) // Ini sekarang akan cocok dengan data DB
+            ->latest('published_at')
+            ->get(['id', 'title', 'slug', 'category', 'excerpt', 'content', 'image_path', 'published_at'])
+            ->map(function ($facility) {
+                return [
+                    'id' => $facility->id,
+                    'title' => $facility->title,
+                    'slug' => $facility->slug,
+                    'category' => $facility->category,
+                    'excerpt' => $facility->excerpt,
+                    'content' => $facility->content,
+                    'image_url' => $facility->image_path,
+                    'published_at' => $facility->published_at ? $facility->published_at->format('d M Y') : null,
+                ];
+            });
+
+        return response()->json($facilities);
+    }
+
+    public function apiShow(Facility $facility)
+    {
+        return response()->json([
+            'id' => $facility->id,
+            'title' => $facility->title,
+            'slug' => $facility->slug,
+            'category' => $facility->category,
+            'excerpt' => $facility->excerpt,
+            'content' => $facility->content,
+            'image_url' => $facility->image_path,
+            'published_at' => $facility->published_at ? $facility->published_at->format('d M Y') : null,
+        ]);
+    }
 }

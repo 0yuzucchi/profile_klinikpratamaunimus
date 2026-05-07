@@ -24,6 +24,8 @@ class ClinicAIController extends Controller
         $this->geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
     }
 
+    
+
     public function processQuery(Request $request)
     {
         try {

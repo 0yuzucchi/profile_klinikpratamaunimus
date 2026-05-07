@@ -68,9 +68,35 @@ class DoctorController extends Controller
 
         // Merender halaman Inertia khusus untuk dokter
         // Sebaiknya buat file Vue/React baru, contohnya: resources/js/Pages/Doctors/Index.vue
-        return Inertia::render('Doctors', [
+        return Inertia::render('Doctors/Index', [
             'doctors' => $doctors,
             'contact' => $this->getContactData()
         ]);
+    }
+
+    public function apiIndex()
+    {
+        $doctors = $this->getDoctorData();
+        // Cukup kembalikan data sebagai JSON.
+        return response()->json($doctors);
+    }
+
+    /**
+     * Mengembalikan detail satu dokter berdasarkan ID dalam format JSON.
+     */
+    public function apiShow($id)
+    {
+        $doctors = $this->getDoctorData();
+        
+        // Cari dokter dengan ID yang cocok
+        $doctor = collect($doctors)->firstWhere('id', $id);
+
+        if ($doctor) {
+            // Jika dokter ditemukan, kembalikan datanya sebagai JSON
+            return response()->json($doctor);
+        } else {
+            // Jika tidak ditemukan, kembalikan pesan error 404
+            return response()->json(['message' => 'Doctor not found'], 404);
+        }
     }
 }

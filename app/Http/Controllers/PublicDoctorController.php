@@ -104,4 +104,53 @@ class PublicDoctorController extends Controller
             'doctor' => $doctor,
         ]);
     }
+
+    
+    public function apiIndex()
+    {
+        // Mengambil semua dokter, diurutkan berdasarkan nama
+        // TIDAK PERLU `with('specialization')` karena specialization adalah field di tabel Doctor itu sendiri (array/JSON), bukan relasi
+        $doctorsFromDb = Doctor::orderBy('name', 'asc')->get();
+
+        // Mapping data agar sesuai dengan kebutuhan aplikasi mobile
+        $doctors = $doctorsFromDb->map(function ($doctor) {
+            return [
+                'id' => $doctor->id,
+            'name' => $doctor->name,
+            'specialization' => $doctor->specialization, // Sesuaikan jika structure specialization beda
+            'photo' => $doctor->image_url, // Gunakan accessor 'image_url'
+            'biography' => $doctor->description, // Asumsi 'description' di model mapping ke 'biography' di frontend
+            'educations' => $doctor->educations->map(fn($edu) => $edu->title)->toArray(), 
+            'workExperiences' => $doctor->workExperiences->map(fn($exp) => $exp->title)->toArray(), 
+            'schedules' => $this->transformScheduleForFrontend($doctor->schedule),
+            ];
+        });
+
+        return response()->json($doctors);
+    }
+
+    /**
+     * Mengembalikan detail satu dokter berdasarkan ID dalam format JSON untuk aplikasi mobile.
+     */
+    public function apiShow(Doctor $doctor) // Laravel Model Binding otomatis menemukan dokter
+    {
+        // Ambil relasi yang dibutuhkan untuk detail lengkap di mobile
+        // TIDAK PERLU `specialization` di sini karena itu field langsung
+        $doctor->load(['educations', 'subSpecializations', 'workExperiences']);
+
+        // Persiapkan data agar sesuai dengan kebutuhan aplikasi mobile
+        $formattedDoctor = [
+            'id' => $doctor->id,
+            'name' => $doctor->name,
+            'specialization' => $doctor->specialization, // Sesuaikan jika structure specialization beda
+            'photo' => $doctor->image_url, // Gunakan accessor 'image_url'
+            'biography' => $doctor->description, // Asumsi 'description' di model mapping ke 'biography' di frontend
+            'educations' => $doctor->educations->map(fn($edu) => $edu->title)->toArray(), 
+            'workExperiences' => $doctor->workExperiences->map(fn($exp) => $exp->title)->toArray(), 
+            'schedules' => $this->transformScheduleForFrontend($doctor->schedule),
+            // Tambahkan data lain yang Anda butuhkan
+        ];
+
+        return response()->json($formattedDoctor);
+    }
 }

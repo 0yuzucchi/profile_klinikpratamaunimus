@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 // Import Controllers
 use App\Http\Controllers\PublicDoctorController;
 use App\Http\Controllers\LandingPageController;
-use App\Http\Controllers\DoctorProfileController;
+use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\ClinicAIController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\ServiceController;
@@ -92,4 +92,4 @@ Route::get('/ai-chat', function () {
 Route::post('/clinic-ai/ask', [ClinicAIController::class, 'processQuery'])->name('ai.ask');
 
 // --- Update Profil Dokter (Backend/Post Update) ---
-Route::post('/doctor-profiles/{doctorProfile}', [DoctorProfileController::class, 'update'])->name('doctor-profiles.post-update');
+Route::post('/doctor-profiles/{doctorProfile}', [DoctorController::class, 'update'])->name('doctor-profiles.post-update');
