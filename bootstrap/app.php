@@ -35,28 +35,15 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })->create();
 
-    /* ========================================================
- * TAMBAHKAN KODE INI UNTUK MENYELESAIKAN ERROR VERCEL
- * ======================================================== */
-if (isset($_ENV['VERCEL'])) {
-    // Pindahkan seluruh aktivitas storage (cache, logs, framework, livewire-tmp) ke /tmp
-    $app->useStoragePath('/tmp/storage');
-    
-    // Pastikan folder-folder esensial dibuat di dalam /tmp saat aplikasi berjalan
-    $paths = [
-        '/tmp/storage/framework/cache/data',
-        '/tmp/storage/framework/views',
-        '/tmp/storage/framework/sessions',
-        '/tmp/storage/logs',
-        '/tmp/storage/app/livewire-tmp', // Sangat penting untuk upload Livewire
-    ];
+    // --- TAMBAHKAN KODE INI ---
+// Periksa apakah aplikasi berjalan di Vercel
+if (isset($_ENV['VERCEL_ENV'])) {
+    // Arahkan direktori storage ke /tmp
+    $app->useStoragePath(env('APP_STORAGE_PATH', '/tmp/storage'));
 
-    foreach ($paths as $path) {
-        if (!is_dir($path)) {
-            mkdir($path, 0777, true);
-        }
-    }
+    // Arahkan path cache secara spesifik jika perlu (opsional, tapi disarankan)
+    $app->useCachePath('/tmp/bootstrap/cache');
 }
-/* ======================================================== */
+// --- AKHIR DARI KODE TAMBAHAN ---
 
 return $app;
