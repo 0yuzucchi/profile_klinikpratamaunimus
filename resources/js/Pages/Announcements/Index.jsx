@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 
 export default function Index({ announcements = [] }) {
     const [search, setSearch] = useState('');
-    
+
     // --- STATE UNTUK PAGINASI BAWAH ---
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
@@ -33,11 +33,25 @@ export default function Index({ announcements = [] }) {
     const totalPages = Math.ceil(rawBottomList.length / itemsPerPage);
 
     const formatDate = (dateString) => {
-        if (!dateString) return '';
+        if (!dateString) return '-';
+
         const date = new Date(dateString);
-        return new Intl.DateTimeFormat('id-ID', {
-            day: '2-digit', month: '2-digit', year: 'numeric'
-        }).format(date).replace(/\//g, '.');
+
+        // Cek apakah tanggal valid sebelum diformat
+        if (isNaN(date.getTime())) {
+            console.error("Format tanggal tidak valid:", dateString);
+            return '-';
+        }
+
+        try {
+            return new Intl.DateTimeFormat('id-ID', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).format(date).replace(/\//g, '.');
+        } catch (e) {
+            return '-';
+        }
     };
 
     const handlePageChange = (pageNumber) => {
@@ -47,12 +61,12 @@ export default function Index({ announcements = [] }) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     };
-    
+
 
     // --- HELPER COMPONENT: MOBILE CARD (CLICKABLE) ---
     const MobileCard = ({ item, badgeText, badgeColor }) => (
-        <Link 
-            href={route('announcements.show', item.slug)} 
+        <Link
+            href={route('announcements.show', item.slug)}
             className="bg-white rounded-[20px] overflow-hidden shadow-lg flex flex-col h-full group block transition-transform active:scale-95"
         >
             <div className="relative h-56 w-full overflow-hidden">
@@ -141,20 +155,20 @@ export default function Index({ announcements = [] }) {
                             {search && <button onClick={() => setSearch('')} className="mt-4 text-green-600 font-bold text-sm">Hapus Pencarian</button>}
                         </div>
 
-                    /* KONDISI 2: DATA TEPAT ADA 2 (TWIN CARDS) */
+                        /* KONDISI 2: DATA TEPAT ADA 2 (TWIN CARDS) */
                     ) : filteredAnnouncements.length === 2 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-16">
                             {filteredAnnouncements.map((item, index) => (
-                                <MobileCard 
-                                    key={item.id} 
-                                    item={item} 
+                                <MobileCard
+                                    key={item.id}
+                                    item={item}
                                     badgeText={index === 0 ? 'Utama' : 'Terbaru'}
                                     badgeColor={index === 0 ? 'bg-gray-900' : 'bg-green-500'}
                                 />
                             ))}
                         </div>
 
-                    /* KONDISI 3: LAYOUT KOMPLEKS */
+                        /* KONDISI 3: LAYOUT KOMPLEKS */
                     ) : (
                         <>
                             {/* --- GRID UTAMA (Index 0-3) --- */}
@@ -169,7 +183,7 @@ export default function Index({ announcements = [] }) {
                                 {/* Desktop View (Clickable Wrapper) */}
                                 <div className="hidden lg:block relative h-full">
                                     {mainFeatured && (
-                                        <Link 
+                                        <Link
                                             href={route('announcements.show', mainFeatured.slug)}
                                             className="block h-full min-h-[600px] rounded-[30px] overflow-hidden shadow-2xl group relative"
                                         >
@@ -205,7 +219,7 @@ export default function Index({ announcements = [] }) {
 
                                 {/* 2. KOLOM KANAN */}
                                 <div className="flex flex-col gap-6">
-                                    
+
                                     {/* A. KARTU KANAN ATAS */}
                                     {/* Mobile View */}
                                     <div className="block lg:hidden">
@@ -214,7 +228,7 @@ export default function Index({ announcements = [] }) {
 
                                     {/* Desktop View (Clickable Wrapper) */}
                                     {rightFeatured && (
-                                        <Link 
+                                        <Link
                                             href={route('announcements.show', rightFeatured.slug)}
                                             className="hidden lg:flex bg-white rounded-[30px] overflow-hidden shadow-xl flex-col h-full relative group transition-transform hover:-translate-y-1"
                                         >
@@ -258,7 +272,7 @@ export default function Index({ announcements = [] }) {
                                             </div>
 
                                             {/* Desktop View (Clickable Wrapper) */}
-                                            <Link 
+                                            <Link
                                                 href={route('announcements.show', item.slug)}
                                                 className="hidden lg:block bg-white rounded-[30px] p-8 shadow-lg relative hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
                                             >
@@ -294,8 +308,8 @@ export default function Index({ announcements = [] }) {
                                             </div>
 
                                             {/* Desktop View */}
-                                            <Link 
-                                                href={route('announcements.show', banner.slug)} 
+                                            <Link
+                                                href={route('announcements.show', banner.slug)}
                                                 className="hidden md:block group"
                                             >
                                                 <div className="bg-white rounded-[20px] shadow-lg border border-gray-100 overflow-hidden flex flex-row h-48 transition-transform duration-300 hover:scale-[1.01] hover:shadow-xl">
@@ -342,9 +356,9 @@ export default function Index({ announcements = [] }) {
 
                                     <div className="space-y-4">
                                         {currentBottomList.map((item) => (
-                                            <Link 
-                                                key={item.id} 
-                                                href={route('announcements.show', item.slug)} 
+                                            <Link
+                                                key={item.id}
+                                                href={route('announcements.show', item.slug)}
                                                 className="block group"
                                             >
                                                 <div className="bg-white p-5 md:p-6 border border-gray-200 rounded-[20px] shadow-sm transition-all duration-300 hover:shadow-md hover:border-gray-300 hover:bg-gray-50 cursor-pointer">
@@ -379,11 +393,10 @@ export default function Index({ announcements = [] }) {
                                                     <button
                                                         key={number}
                                                         onClick={() => handlePageChange(number)}
-                                                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all ${
-                                                            currentPage === number
+                                                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all ${currentPage === number
                                                                 ? 'bg-green-500 text-white shadow-md transform scale-110'
                                                                 : 'bg-white text-gray-600 border border-gray-300 hover:border-green-500 hover:text-green-600'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {number}
                                                     </button>

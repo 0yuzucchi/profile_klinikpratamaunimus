@@ -36,7 +36,7 @@ class AnnouncementController extends Controller
                 'title' => $announcement->title,
                 'excerpt' => $announcement->excerpt,
                 'image_url' => $announcement->image_url, 
-                'date' => Carbon::parse($announcement->published_at)->isoFormat('D MMMM YYYY'),
+        'date' => $announcement->published_at ? $announcement->published_at->toIso8601String() : null,
             ]);
             
         // 6. Return ke Inertia (sertakan 'filters' agar input search di frontend tetap terisi jika perlu)
@@ -71,7 +71,7 @@ class AnnouncementController extends Controller
                 'title' => $currentAnnouncement->title,
                 'content' => $currentAnnouncement->content,
                 'image_url' => $currentAnnouncement->image_url,
-                'date' => Carbon::parse($currentAnnouncement->published_at)->isoFormat('D MMMM YYYY'),
+    'date' => $currentAnnouncement->published_at ? $currentAnnouncement->published_at->toIso8601String() : null,
             ],
             'otherAnnouncements' => $otherAnnouncements,
         ]);
@@ -100,7 +100,7 @@ class AnnouncementController extends Controller
                 'excerpt' => $announcement->excerpt,
                 'image_url' => $announcement->image_url,
                 'published_at' => $announcement->published_at,
-                'date' => Carbon::parse($announcement->published_at)->isoFormat('D MMMM YYYY'),
+        'date' => $announcement->published_at ? $announcement->published_at->toIso8601String() : null,
             ]);
 
         return response()->json($announcements);
@@ -137,7 +137,7 @@ class AnnouncementController extends Controller
                 'excerpt' => $announcement->excerpt,
                 'image_url' => $announcement->image_url,
                 'published_at' => $announcement->published_at,
-                'date' => Carbon::parse($announcement->published_at)->isoFormat('D MMMM YYYY'),
+    'date' => $currentAnnouncement->published_at ? $currentAnnouncement->published_at->toIso8601String() : null,
             ],
             'otherAnnouncements' => $otherAnnouncements,
             
