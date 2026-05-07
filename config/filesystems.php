@@ -32,7 +32,7 @@ return [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/private'),
+            'root' => env('VERCEL_JOB_ID') ? '/tmp/storage/app' : storage_path('app'),
             'serve' => true,
             'throw' => false,
             'report' => false,
@@ -40,7 +40,7 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            'root' => env('VERCEL_JOB_ID') ? '/tmp/storage/app/public' : storage_path('app/public'),
             'url' => env('APP_URL') . '/storage',
             'visibility' => 'public',
             'throw' => false,
