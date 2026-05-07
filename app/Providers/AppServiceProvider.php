@@ -21,11 +21,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (config('app.env') === 'production') {
-        URL::forceScheme('https');
-        }
-
-            if (config('app.env') === 'production' && isset($_ENV['VERCEL_JOB_ID'])) {
+        
+    if (config('app.env') === 'production' && isset($_ENV['VERCEL_JOB_ID'])) {
         // Redirect folder cache dan view ke /tmp
         $this->app->useStoragePath('/tmp/storage');
         
@@ -33,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
         if (!is_dir('/tmp/storage/framework/views')) {
             mkdir('/tmp/storage/framework/views', 0755, true);
         }
+                URL::forceScheme('https');
+
     }
+
     }
 }
