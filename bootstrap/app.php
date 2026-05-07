@@ -34,16 +34,3 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
-
-    // --- TAMBAHKAN KODE INI ---
-// Periksa apakah aplikasi berjalan di Vercel
-if (isset($_ENV['VERCEL_ENV'])) {
-    // Arahkan direktori storage ke /tmp
-    $app->useStoragePath(env('APP_STORAGE_PATH', '/tmp/storage'));
-
-    // Arahkan path cache secara spesifik jika perlu (opsional, tapi disarankan)
-    $app->useCachePath('/tmp/bootstrap/cache');
-}
-// --- AKHIR DARI KODE TAMBAHAN ---
-
-return $app;

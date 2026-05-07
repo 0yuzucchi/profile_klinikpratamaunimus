@@ -50,7 +50,5 @@
         "LOG_CHANNEL": "stderr",
         "SESSION_DRIVER": "cookie",
         "SESSION_SECURE_COOKIE": "true" 
-    },
-        "outputDirectory": ".vercel/output"
-
+    }
 }
