@@ -537,7 +537,6 @@ class AnnouncementResource extends Resource
 
                                 Forms\Components\FileUpload::make('image_path')
                                     ->label('Upload Thumbnail')
-                                        ->disk('local') // Tambahkan ini agar file sementara masuk ke /tmp/storage/app/livewire-tmp
                                     ->helperText('Upload baru akan menggantikan thumbnail yang ada.')
                                     ->image()
                                     ->imageEditor()
