@@ -8,7 +8,11 @@ use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\HandleInertiaRequests; // <--- TAMBAHKAN BARIS INI
 
-// Tambahkan blok ini di paling atas untuk memindahkan storage ke /tmp
+/*
+|--------------------------------------------------------------------------
+| VERCEL STORAGE FIX
+|--------------------------------------------------------------------------
+*/
 if (isset($_SERVER['VERCEL_URL']) || env('VERCEL_JOB_ID')) {
     $storagePath = '/tmp/storage';
     if (!is_dir($storagePath . '/framework/views')) {
@@ -16,7 +20,7 @@ if (isset($_SERVER['VERCEL_URL']) || env('VERCEL_JOB_ID')) {
         mkdir($storagePath . '/framework/cache/data', 0777, true);
         mkdir($storagePath . '/framework/sessions', 0777, true);
     }
-    // Set environment variable untuk storage secara langsung
+    // Paksa folder storage ke /tmp sebelum aplikasi di-build
     putenv("APP_STORAGE={$storagePath}");
 }
 
@@ -45,4 +49,6 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
-    })->create();
+    })->create()
+        ->useStoragePath(isset($storagePath) ? $storagePath : storage_path());
+    
