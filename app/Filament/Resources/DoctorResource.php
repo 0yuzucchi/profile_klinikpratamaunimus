@@ -13,6 +13,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TagsInput;
+use Filament\Forms\Components\Toggle; // <--- Pastikan ada di sini
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\ImageColumn;
@@ -34,7 +35,7 @@ class DoctorResource extends Resource
 
     // <--- 3. Daftar Role (Mirip Middleware)
     protected static ?array $allowedRoles = [
-        User::ROLE_HUMAS, 
+        User::ROLE_HUMAS,
         // Super Admin sudah otomatis boleh di Trait
     ];
 
@@ -48,25 +49,37 @@ class DoctorResource extends Resource
         // Variabel-variabel ini tidak diubah
         $universities = Cache::get('form_data_universities', []);
         $workplaces = Cache::get('form_data_workplaces', []);
-        $degrees = ['S.Ked (Sarjana Kedokteran)', 'dr. (Dokter)', /* ... etc */ ];
-        $medicalSubspecialties = ['Alergi-Imunologi Klinis', 'Andrologi', /* ... etc */ ];
+        $degrees = ['S.Ked (Sarjana Kedokteran)', 'dr. (Dokter)', /* ... etc */];
+        $medicalSubspecialties = ['Alergi-Imunologi Klinis', 'Andrologi', /* ... etc */];
         $days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
-        
+
         // Gabungkan saran untuk spesialisasi dan layanan umum
         $specializationAndServicesSuggestions = [
             // Spesialisasi
-            'Dokter Umum', 'Dokter Anak', 'Dokter Gigi', 'Dokter Kandungan & Ginekologi', 'Dokter Penyakit Dalam',
+            'Dokter Umum',
+            'Dokter Anak',
+            'Dokter Gigi',
+            'Dokter Kandungan & Ginekologi',
+            'Dokter Penyakit Dalam',
             // Layanan Umum
-            'Konsultasi Umum', 'Pemeriksaan Kesehatan', 'Scalling Gigi', 'Tambal Gigi', 'Cabut Gigi', 'USG Kehamilan', 'Imunisasi Anak', 'Khitan', 'Perawatan Luka'
+            'Konsultasi Umum',
+            'Pemeriksaan Kesehatan',
+            'Scalling Gigi',
+            'Tambal Gigi',
+            'Cabut Gigi',
+            'USG Kehamilan',
+            'Imunisasi Anak',
+            'Khitan',
+            'Perawatan Luka'
         ];
-        
+
 
         return $form
             ->schema([
                 Section::make('Informasi Utama Dokter')->schema([
                     Grid::make(2)->schema([
                         TextInput::make('name')->required()->label('Nama Lengkap Dokter')->placeholder('Contoh: Dr. Budi Santoso, Sp.A')->maxLength(255),
-                        
+
                         TagsInput::make('specialization')
                             ->required()
                             ->label('Spesialisasi & Layanan')
@@ -74,9 +87,9 @@ class DoctorResource extends Resource
                             ->helperText('Item pertama akan jadi spesialisasi utama. Tekan Enter untuk menambah item baru.')
                             ->suggestions($specializationAndServicesSuggestions)
                     ]),
-                    
+
                     Textarea::make('description')->label('Deskripsi / Biografi Singkat')->placeholder('Jelaskan tentang dokter, keahlian, dan pendekatan terhadap pasien.')->rows(4)->columnSpan('full'),
-                    
+
                     Section::make('Foto Saat Ini')
                         ->schema([
                             Placeholder::make('image_preview')
@@ -89,7 +102,7 @@ class DoctorResource extends Resource
                                     return new HtmlString('<span>Tidak ada foto.</span>');
                                 })
                         ])
-                        ->visible(fn (?Model $record) => $record && $record->exists && $record->image_path),
+                        ->visible(fn(?Model $record) => $record && $record->exists && $record->image_path),
 
                     FileUpload::make('image_path')
                         ->label('Foto Dokter')
@@ -97,7 +110,7 @@ class DoctorResource extends Resource
                         ->nullable()
                         ->columnSpan('full')
                         // === PERBAIKAN DI SINI: Mencegah path gambar terhapus saat edit ===
-                        ->dehydrated(fn ($state) => filled($state))
+                        ->dehydrated(fn($state) => filled($state))
                         // ================================================================
                         ->saveUploadedFileUsing(function (UploadedFile $file): ?string {
                             $fileName = time() . '_' . $file->getClientOriginalName();
@@ -114,11 +127,13 @@ class DoctorResource extends Resource
                             if ($response->failed()) {
                                 throw new \Exception('Unggah foto ke Supabase gagal: ' . $response->body());
                             }
-                            
+
                             return env('SUPABASE_URL') . '/storage/v1/object/public/' . $bucketFolder . '/' . $fileName;
                         })
                         ->deleteUploadedFileUsing(function (?string $state): void {
-                            if (blank($state)) { return; }
+                            if (blank($state)) {
+                                return;
+                            }
                             $filePath = str_replace(env('SUPABASE_URL') . '/storage/v1/object/public/', '', $state);
                             Http::withHeaders([
                                 'apikey' => env('SUPABASE_KEY'),
@@ -126,142 +141,67 @@ class DoctorResource extends Resource
                             ])->delete(env('SUPABASE_URL') . '/storage/v1/object/' . $filePath);
                         }),
                 ]),
-                
+
                 // --- SISA FORM TIDAK ADA PERUBAHAN ---
                 Section::make('Jadwal Praktik (WIB)')
     ->schema([
-        // --- SENIN ---
-        Section::make('Senin')
-            ->compact() // Membuat padding lebih kecil agar rapi
-            ->schema([
-                Grid::make(2)->schema([
-                    TimePicker::make('schedule.senin.start')
-                        ->label('Jam Mulai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                    TimePicker::make('schedule.senin.end')
-                        ->label('Jam Selesai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                ]),
-            ]),
+        // Gunakan fungsi bantuan untuk menghindari pengulangan kode yang panjang
+        ...collect(['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'])->map(function($day) {
+            return Section::make(ucfirst($day))
+                ->compact()
+                ->schema([
+                    Grid::make(12)->schema([ // Menggunakan grid 12 agar bisa mengatur lebar kolom lebih presisi
+                        Toggle::make("schedule.{$day}.is_off")
+                            ->label('Libur')
+                            ->inline(false)
+                            ->columnSpan(2) // Kolom kecil untuk toggle
+                            ->live()
+                            ->afterStateUpdated(function ($state, $set) use ($day) {
+                                if ($state) {
+                                    $set("schedule.{$day}.start", null);
+                                    $set("schedule.{$day}.end", null);
+                                }
+                            }),
 
-        // --- SELASA ---
-        Section::make('Selasa')
-            ->compact()
-            ->schema([
-                Grid::make(2)->schema([
-                    TimePicker::make('schedule.selasa.start')
-                        ->label('Jam Mulai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                    TimePicker::make('schedule.selasa.end')
-                        ->label('Jam Selesai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                ]),
-            ]),
+                        TimePicker::make("schedule.{$day}.start")
+                            ->label('Jam Mulai')
+                            ->seconds(false)
+                            ->displayFormat('H:i')
+                            ->columnSpan(5) // Kolom lebih lebar untuk jam
+                            ->disabled(fn ($get) => $get("schedule.{$day}.is_off"))
+                            ->dehydrated(),
 
-        // --- RABU ---
-        Section::make('Rabu')
-            ->compact()
-            ->schema([
-                Grid::make(2)->schema([
-                    TimePicker::make('schedule.rabu.start')
-                        ->label('Jam Mulai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                    TimePicker::make('schedule.rabu.end')
-                        ->label('Jam Selesai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                ]),
-            ]),
-
-        // --- KAMIS ---
-        Section::make('Kamis')
-            ->compact()
-            ->schema([
-                Grid::make(2)->schema([
-                    TimePicker::make('schedule.kamis.start')
-                        ->label('Jam Mulai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                    TimePicker::make('schedule.kamis.end')
-                        ->label('Jam Selesai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                ]),
-            ]),
-
-        // --- JUMAT ---
-        Section::make('Jumat')
-            ->compact()
-            ->schema([
-                Grid::make(2)->schema([
-                    TimePicker::make('schedule.jumat.start')
-                        ->label('Jam Mulai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                    TimePicker::make('schedule.jumat.end')
-                        ->label('Jam Selesai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                ]),
-            ]),
-
-        // --- SABTU ---
-        Section::make('Sabtu')
-            ->compact()
-            ->schema([
-                Grid::make(2)->schema([
-                    TimePicker::make('schedule.sabtu.start')
-                        ->label('Jam Mulai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                    TimePicker::make('schedule.sabtu.end')
-                        ->label('Jam Selesai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                ]),
-            ]),
-
-        // --- MINGGU ---
-        Section::make('Minggu')
-            ->compact()
-            ->schema([
-                Grid::make(2)->schema([
-                    TimePicker::make('schedule.minggu.start')
-                        ->label('Jam Mulai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                    TimePicker::make('schedule.minggu.end')
-                        ->label('Jam Selesai')
-                        ->seconds(false)
-                        ->displayFormat('H:i'),
-                ]),
-            ]),
+                        TimePicker::make("schedule.{$day}.end")
+                            ->label('Jam Selesai')
+                            ->seconds(false)
+                            ->displayFormat('H:i')
+                            ->columnSpan(5) // Kolom lebih lebar untuk jam
+                            ->disabled(fn ($get) => $get("schedule.{$day}.is_off"))
+                            ->dehydrated(),
+                    ]),
+                ]);
+        })->toArray(),
     ]),
-                
+
                 Section::make('Riwayat Pendidikan')->schema([
-                    Repeater::make('educations')->relationship()->label('')->schema([
+                    Repeater::make('educations')->relationship()->label('')->defaultItems(0)->schema([
                         Grid::make(4)->schema([
-                            TagsInput::make('degree')->required()->label('Gelar')->suggestions($degrees)->dehydrateStateUsing(fn ($state) => $state[0] ?? null)->formatStateUsing(fn ($state) => $state ? [$state] : []),
-                            TagsInput::make('institution')->required()->label('Institusi')->suggestions($universities)->columnSpan(2)->dehydrateStateUsing(fn ($state) => $state[0] ?? null)->formatStateUsing(fn ($state) => $state ? [$state] : []),
+                            TagsInput::make('degree')->required()->label('Gelar')->suggestions($degrees)->dehydrateStateUsing(fn($state) => $state[0] ?? null)->formatStateUsing(fn($state) => $state ? [$state] : []),
+                            TagsInput::make('institution')->required()->label('Institusi')->suggestions($universities)->columnSpan(2)->dehydrateStateUsing(fn($state) => $state[0] ?? null)->formatStateUsing(fn($state) => $state ? [$state] : []),
                             TextInput::make('year')->required()->numeric()->label('Tahun Lulus')->minValue(1950)->maxValue(date('Y')),
                         ])
                     ])->addActionLabel('Tambah Riwayat Pendidikan')->columns(1),
                 ]),
                 Section::make('Sub-Spesialisasi / Bidang Minat')->schema([
-                    Repeater::make('subSpecializations')->relationship()->label('')->schema([
-                        TagsInput::make('name')->required()->label('Nama Sub-spesialisasi')->suggestions($medicalSubspecialties)->dehydrateStateUsing(fn ($state) => $state[0] ?? null)->formatStateUsing(fn ($state) => $state ? [$state] : []),
+                    Repeater::make('subSpecializations')->relationship()->label('')->defaultItems(0)->schema([
+                        TagsInput::make('name')->required()->label('Nama Sub-spesialisasi')->suggestions($medicalSubspecialties)->dehydrateStateUsing(fn($state) => $state[0] ?? null)->formatStateUsing(fn($state) => $state ? [$state] : []),
                     ])->addActionLabel('Tambah Sub-Spesialisasi'),
                 ]),
                 Section::make('Pengalaman Kerja')->schema([
-                    Repeater::make('workExperiences')->relationship()->label('')->schema([
+                    Repeater::make('workExperiences')->relationship()->label('')->defaultItems(0)->schema([
                         Grid::make(4)->schema([
                             TextInput::make('position')->required()->label('Posisi'),
-                            TagsInput::make('place')->required()->label('Tempat Bekerja')->suggestions($workplaces)->columnSpan(2)->dehydrateStateUsing(fn ($state) => $state[0] ?? null)->formatStateUsing(fn ($state) => $state ? [$state] : []),
+                            TagsInput::make('place')->required()->label('Tempat Bekerja')->suggestions($workplaces)->columnSpan(2)->dehydrateStateUsing(fn($state) => $state[0] ?? null)->formatStateUsing(fn($state) => $state ? [$state] : []),
                             TextInput::make('period')->required()->label('Periode')->placeholder('Contoh: 2018-2022'),
                         ])
                     ])->addActionLabel('Tambah Pengalaman Kerja')->columns(1),
@@ -274,46 +214,46 @@ class DoctorResource extends Resource
         return $table
             ->columns([
                 ImageColumn::make('image_path')
-                ->label('Thumb')
-                ->square()
-                ->size(48)
-                ->getStateUsing(function ($record) {
-            
-                    $value = $record->image_path;
-                    // Normalisasi kalau ternyata array
-                    if (is_array($value)) {
-                        $value = $value[0] ?? null;
-                    }
-            
-                    // Pastikan string URL
-                    if (is_string($value) && str_starts_with($value, 'http')) {
-                        // 🔑 INI KUNCI UTAMA: encode spasi
-                        return str_replace(' ', '%20', $value);
-                    }
-            
-                    return null;
-                })
-                ->extraImgAttributes([
-                    'class' => 'object-cover',
-                ]),
+                    ->label('Thumb')
+                    ->square()
+                    ->size(48)
+                    ->getStateUsing(function ($record) {
 
-    
+                        $value = $record->image_path;
+                        // Normalisasi kalau ternyata array
+                        if (is_array($value)) {
+                            $value = $value[0] ?? null;
+                        }
+
+                        // Pastikan string URL
+                        if (is_string($value) && str_starts_with($value, 'http')) {
+                            // 🔑 INI KUNCI UTAMA: encode spasi
+                            return str_replace(' ', '%20', $value);
+                        }
+
+                        return null;
+                    })
+                    ->extraImgAttributes([
+                        'class' => 'object-cover',
+                    ]),
+
+
                 TextColumn::make('name')
                     ->label('Nama Dokter')
                     ->searchable()
                     ->sortable(),
-    
+
                 TextColumn::make('specialization')
                     ->label('Spesialisasi / Layanan')
                     ->searchable()
                     ->badge(),
-    
+
                 TextColumn::make('created_at')
                     ->label('Dibuat Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-    
+
                 TextColumn::make('updated_at')
                     ->label('Diperbarui Pada')
                     ->dateTime()
@@ -326,9 +266,12 @@ class DoctorResource extends Resource
                 Tables\Actions\DeleteAction::make(),
             ]);
     }
-    
 
-    public static function getRelations(): array { return []; }
+
+    public static function getRelations(): array
+    {
+        return [];
+    }
 
     public static function getPages(): array
     {

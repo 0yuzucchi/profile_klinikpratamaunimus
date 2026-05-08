@@ -169,7 +169,7 @@ public static function form(Form $form): Form
 
     ->schema([
         ToggleButtons::make('type')
-            ->label('Tipe Kanal')
+            ->label('Pilih Tipe Kanal')
             ->options([
                 'email' => 'Email',
                 'whatsapp' => 'WhatsApp',
