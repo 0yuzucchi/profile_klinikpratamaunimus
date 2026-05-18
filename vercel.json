@@ -35,11 +35,11 @@
             "dest": "/public/favicon.ico"
         },
         {
-            "src": "/(.*)",
+            "src": "/api/(.*)",
             "dest": "/api/index.php"
         },
         {
-            "src": "/api/(.*)",
+            "src": "/(.*)",
             "dest": "/api/index.php"
         }
     ],
