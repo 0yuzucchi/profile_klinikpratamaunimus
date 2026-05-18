@@ -109,38 +109,37 @@ class AnnouncementController extends Controller
     /**
      * Mengembalikan detail satu pengumuman berdasarkan slug dalam format JSON untuk aplikasi mobile.
      */
-    public function apiShow(Announcement $announcement) // INI JUGA SUDAH BENAR UNTUK DETAIL API
-    {
-        // Model Binding otomatis akan mencari berdasarkan slug dan menerapkan `firstOrFail()`
-
-        // Query pengumuman lain
-        $otherAnnouncements = Announcement::visible()
-            ->where('slug', '!=', $announcement->slug)
-            ->latest('published_at')
-            ->take(4)
-            ->get()
-            ->map(fn ($oa) => [ // Menggunakan alias 'oa' agar tidak bentrok dengan $announcement
-                'id' => $oa->id,
-                'slug' => $oa->slug,
-                'title' => $oa->title,
-                'image_url' => $oa->image_url,
-                'date' => Carbon::parse($oa->published_at)->isoFormat('D MMMM YYYY'),
-            ]);
-
-        return response()->json([
-            'announcement' => [
-                'id' => $announcement->id,
-                'slug' => $announcement->slug,
-                'title' => $announcement->title,
-                'status' => $announcement->status,
-                'content' => $announcement->content,
-                'excerpt' => $announcement->excerpt,
-                'image_url' => $announcement->image_url,
-                'published_at' => $announcement->published_at,
-    'date' => $currentAnnouncement->published_at ? $currentAnnouncement->published_at->toIso8601String() : null,
-            ],
-            'otherAnnouncements' => $otherAnnouncements,
-            
+    public function apiShow(Announcement $announcement) 
+{
+    // Menggunakan Carbon untuk format tanggal di list 'Lainnya'
+    $otherAnnouncements = Announcement::visible()
+        ->where('slug', '!=', $announcement->slug)
+        ->latest('published_at')
+        ->take(4)
+        ->get()
+        ->map(fn ($oa) => [
+            'id' => $oa->id,
+            'slug' => $oa->slug,
+            'title' => $oa->title,
+            'image_url' => $oa->image_url,
+            // Pastikan Carbon sudah di-import di atas: use Illuminate\Support\Carbon;
+            'date' => $oa->published_at ? \Carbon\Carbon::parse($oa->published_at)->isoFormat('D MMMM YYYY') : null,
         ]);
-    }
+
+    return response()->json([
+        'announcement' => [
+            'id' => $announcement->id,
+            'slug' => $announcement->slug,
+            'title' => $announcement->title,
+            'status' => $announcement->status,
+            'content' => $announcement->content,
+            'excerpt' => $announcement->excerpt,
+            'image_url' => $announcement->image_url,
+            'published_at' => $announcement->published_at,
+            // PERBAIKAN DI SINI: Ganti $currentAnnouncement menjadi $announcement
+            'date' => $announcement->published_at ? \Carbon\Carbon::parse($announcement->published_at)->isoFormat('D MMMM YYYY') : null,
+        ],
+        'otherAnnouncements' => $otherAnnouncements,
+    ]);
+}
 }
