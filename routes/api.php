@@ -12,14 +12,92 @@ use App\Http\Controllers\Public\JobVacancyController; // <-- TAMBAHKAN INI (perh
 use App\Http\Controllers\ContactController; // <-- TAMBAHKAN INI
 use App\Http\Controllers\ClinicAIController; // <-- TAMBAHKAN INI
 use App\Models\PushToken;
+use Illuminate\Support\Facades\Log;
 
+// Route::post('/save-push-token', function (Request $request) {
+
+//     $request->validate([
+//         'token' => 'required|string',
+//         'device_name' => 'nullable|string'
+//     ]);
+
+//     PushToken::updateOrCreate(
+//         [
+//             'token' => $request->token
+//         ],
+//         [
+//             'user_id' => auth()->id(), // kalau login
+//             'device_name' => $request->device_name
+//         ]
+//     );
+
+//     return response()->json([
+//         'success' => true
+//     ]);
+// });
 Route::post('/save-push-token', function (Request $request) {
-    $request->validate(['token' => 'required|string']);
-    
-    // Simpan token jika belum ada, atau update jika sudah ada
-    PushToken::updateOrCreate(['token' => $request->token]);
-    
-    return response()->json(['success' => true]);
+
+    Log::info('=== PUSH TOKEN REQUEST ===');
+
+    Log::info('ALL REQUEST', $request->all());
+
+    Log::info('JSON REQUEST', $request->json()->all());
+
+    Log::info('RAW BODY', [
+        'content' => $request->getContent()
+    ]);
+
+    Log::info('HEADERS', $request->headers->all());
+
+    $request->validate([
+        'token' => 'required|string',
+        'device_name' => 'nullable|string',
+        'device_info' => 'nullable|array',
+    ]);
+
+    $device = $request->device_info ?? [];
+
+    $finalDeviceName =
+        $device['deviceName']
+        ?? $device['modelName']
+        ?? $request->device_name
+        ?? 'Unknown Device';
+
+    $pushToken = PushToken::updateOrCreate(
+        [
+            'token' => $request->token
+        ],
+        [
+            'user_id' => auth()->id(),
+
+            'device_name' => $finalDeviceName,
+
+            'device_brand' => $device['brand'] ?? null,
+
+            'device_manufacturer' => $device['manufacturer'] ?? null,
+
+            'device_model' => $device['modelName'] ?? null,
+
+            'device_model_id' => $device['modelId'] ?? null,
+
+            'os_name' => $device['osName'] ?? null,
+
+            'os_version' => $device['osVersion'] ?? null,
+
+            'device_type' => $device['deviceType'] ?? null,
+
+            'is_device' => $device['isDevice'] ?? true,
+
+            'device_info' => $device,
+        ]
+    );
+
+    Log::info('SAVED DATA', $pushToken->toArray());
+
+    return response()->json([
+        'success' => true,
+        'data' => $pushToken
+    ]);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

@@ -69,4 +69,9 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->role === $role;
     }
+
+    public function pushTokens()
+{
+    return $this->hasMany(PushToken::class);
+}
 }
