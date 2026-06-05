@@ -23,14 +23,12 @@ class PushToken extends Model
         'os_version',
 
         'device_type',
-        'is_device',
 
         'device_info',
     ];
 
     protected $casts = [
         'device_info' => 'array',
-        'is_device' => 'boolean',
     ];
 
     public function user()

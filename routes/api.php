@@ -14,27 +14,6 @@ use App\Http\Controllers\ClinicAIController; // <-- TAMBAHKAN INI
 use App\Models\PushToken;
 use Illuminate\Support\Facades\Log;
 
-// Route::post('/save-push-token', function (Request $request) {
-
-//     $request->validate([
-//         'token' => 'required|string',
-//         'device_name' => 'nullable|string'
-//     ]);
-
-//     PushToken::updateOrCreate(
-//         [
-//             'token' => $request->token
-//         ],
-//         [
-//             'user_id' => auth()->id(), // kalau login
-//             'device_name' => $request->device_name
-//         ]
-//     );
-
-//     return response()->json([
-//         'success' => true
-//     ]);
-// });
 Route::post('/save-push-token', function (Request $request) {
 
     Log::info('=== PUSH TOKEN REQUEST ===');
@@ -63,6 +42,11 @@ Route::post('/save-push-token', function (Request $request) {
         ?? $request->device_name
         ?? 'Unknown Device';
 
+        Log::info('IS DEVICE VALUE', [
+            'value' => $device['isDevice'] ?? true,
+            'type'  => gettype($device['isDevice'] ?? true),
+        ]);
+
     $pushToken = PushToken::updateOrCreate(
         [
             'token' => $request->token
@@ -85,8 +69,6 @@ Route::post('/save-push-token', function (Request $request) {
             'os_version' => $device['osVersion'] ?? null,
 
             'device_type' => $device['deviceType'] ?? null,
-
-            'is_device' => $device['isDevice'] ?? true,
 
             'device_info' => $device,
         ]
