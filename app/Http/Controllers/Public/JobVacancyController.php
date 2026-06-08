@@ -64,6 +64,46 @@ class JobVacancyController extends Controller
         ]);
     }
 
+    private function calculateIsOpen(JobVacancy $vacancy): bool
+    {
+        $status = $vacancy->status->value ?? null;
+        $openUntilType = $vacancy->open_until_type->value ?? null;
+    
+        // STEP 1
+        if ($status !== 'open') {
+            return false;
+        }
+    
+        // STEP 2
+        if ($openUntilType === 'undetermined') {
+            return true;
+        }
+    
+        // STEP 3
+        if ($openUntilType === 'date') {
+            if (!$vacancy->open_until_date) {
+                return false;
+            }
+    
+            $deadline = Carbon::parse($vacancy->open_until_date)
+                ->endOfDay();
+    
+            $now = now();
+    
+            $result = $deadline->gte($now);
+    
+            return $result;
+        }
+    
+        logger()->info('FALLBACK RETURN FALSE', [
+            'id' => $vacancy->id,
+            'status' => $status,
+            'open_until_type' => $openUntilType,
+        ]);
+    
+        return false;
+    }
+
     public function apiIndex(Request $request)
     {
         $query = JobVacancy::query();
@@ -96,15 +136,15 @@ class JobVacancyController extends Controller
 
         // Mapping data agar sesuai untuk frontend mobile
         $mappedVacancies = $vacancies->map(function ($vacancy) {
-            $isOpen = ($vacancy->status === 'open' && (is_null($vacancy->open_until_date) || Carbon::parse($vacancy->open_until_date)->isFuture() || Carbon::parse($vacancy->open_until_date)->isToday()));
+            $isOpen = $this->calculateIsOpen($vacancy);
             
             return [
                 'id' => $vacancy->id,
                 'profession' => $vacancy->profession,
                 'status' => $vacancy->status, // Status dari DB
                 'is_open' => $isOpen, // Status buka/tutup yang dihitung
-                'open_until_date' => $vacancy->open_until_date ? Carbon::parse($vacancy->open_until_date)->isoFormat('D MMMM YYYY') : 'Tidak Terbatas',
-                'open_until_type' => $vacancy->open_until_type ? Carbon::parse($vacancy->open_until_date)->isoFormat('D MMMM YYYY') : 'Tidak Terbatas',
+                'open_until_date' => $vacancy->open_until_date,
+                'open_until_type' => $vacancy->open_until_type,
 
                 'description' => $vacancy->description, // Konten lowongan kerja (HTML string)
                 'requirements' => $vacancy->requirements, // Persyaratan (HTML string)
@@ -132,15 +172,15 @@ class JobVacancyController extends Controller
     public function apiShow(JobVacancy $jobVacancy) // Menggunakan Model Binding
     {
         // Hitung status is_open secara dinamis
-        $isOpen = ($jobVacancy->status === 'open' && (is_null($jobVacancy->open_until_date) || Carbon::parse($jobVacancy->open_until_date)->isFuture() || Carbon::parse($jobVacancy->open_until_date)->isToday()));
+        $isOpen = $this->calculateIsOpen($jobVacancy);
 
         return response()->json([
             'id' => $jobVacancy->id,
             'profession' => $jobVacancy->profession,
             'status' => $jobVacancy->status,
             'is_open' => $isOpen,
-            'open_until_type' => $jobVacancy->open_until_type ? Carbon::parse($jobVacancy->open_until_date)->isoFormat('D MMMM YYYY') : 'Tidak Terbatas',
-            'open_until_date' => $jobVacancy->open_until_date ? Carbon::parse($jobVacancy->open_until_date)->isoFormat('D MMMM YYYY') : 'Tidak Terbatas',
+            'open_until_type' => $jobVacancy->open_until_type,
+            'open_until_date' => $jobVacancy->open_until_date,
             'description' => $jobVacancy->description,
             'requirements' => $jobVacancy->requirements,
             'required_documents' => $jobVacancy->required_documents, // Persyaratan (HTML string)

@@ -101,8 +101,9 @@ class CreateAnnouncement extends CreateRecord
                 'sound' => 'default',
                 'priority' => 'high',
                 'data' => [
-                    'slug' => $record->slug,
                     'type' => 'announcement',
+                    'slug' => $record->slug,
+                    'screen' => "/notifications/{$record->slug}",
                 ],
             ];
 
